@@ -1,0 +1,18 @@
+[project]
+name = "context-canvas"
+version = "0.1.0"
+description = "Context Canvas MVP API and MCP source connector services."
+requires-python = ">=3.12"
+dependencies = [
+    "atlassian-python-api>=4.0.7",
+    "fastapi>=0.115.0",
+    "fastmcp>=3.2.0",
+    "httpx>=0.27.0",
+    "openai>=2.6.1",
+    "pydantic>=2.11.0",
+    "python-dotenv>=1.0.1",
+    "uvicorn>=0.30.0",
+]
+
+[tool.uv]
+package = false

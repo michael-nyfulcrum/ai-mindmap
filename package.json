@@ -1,0 +1,16 @@
+{
+  "name": "context-canvas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @context-canvas/api --filter @context-canvas/web dev",
+    "dev:web": "pnpm --filter @context-canvas/web dev",
+    "dev:api": "pnpm --filter @context-canvas/api dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test:e2e": "pnpm --filter @context-canvas/api test:e2e",
+    "preview": "pnpm --filter @context-canvas/web preview"
+  },
+  "packageManager": "pnpm@10.13.1"
+}

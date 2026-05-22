@@ -1,0 +1,11 @@
+{
+  "name": "@context-canvas/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "UV_CACHE_DIR=../../.uv-cache PYTHONPATH=.:../mcp uv run --project ../.. python -m context_canvas_api.main",
+    "build": "UV_CACHE_DIR=../../.uv-cache PYTHONPATH=.:../mcp uv run --project ../.. python -m compileall context_canvas_api ../mcp/context_canvas_mcp",
+    "lint": "UV_CACHE_DIR=../../.uv-cache PYTHONPATH=.:../mcp uv run --project ../.. python -m compileall context_canvas_api ../mcp/context_canvas_mcp test",
+    "test:e2e": "UV_CACHE_DIR=../../.uv-cache PYTHONPATH=.:../mcp uv run --project ../.. python -m unittest discover -s test -t . -v"
+  }
+}
