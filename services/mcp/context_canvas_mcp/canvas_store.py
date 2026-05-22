@@ -113,7 +113,7 @@ class CanvasStore:
             if not project:
                 return None
             nodes = [
-                json.loads(row["payload_json"])
+                _normalize_canvas_node(json.loads(row["payload_json"]))
                 for row in connection.execute(
                     "SELECT payload_json FROM canvas_nodes WHERE project_id = ? ORDER BY created_at ASC",
                     (resolved_project_id,),
@@ -179,15 +179,13 @@ class CanvasStore:
         self,
         project_id: str,
         title: str,
-        body: str,
-        priority: str = "Medium",
-        status: str = "Draft",
+        content: str,
         source_node_ids: list[str] | None = None,
         tags: list[str] | None = None,
         node_id: str | None = None,
     ) -> CanvasMutationResult:
         clean_title = _required_text(title, "title")
-        clean_body = _required_text(body, "body")
+        clean_content = _required_text(content, "content")
         resolved_node_id = node_id or f"node_req_{_slug(clean_title)}_{uuid4().hex[:8]}"
         now = _utc_now()
         node = {
@@ -198,16 +196,13 @@ class CanvasStore:
                 "canvasType": "requirement",
                 "title": clean_title,
                 "fields": {
-                    "body": clean_body,
-                    "priority": priority.strip() or "Medium",
-                    "status": status.strip() or "Draft",
-                    "sourceNodeIds": ",".join(source_node_ids or []),
+                    "content": clean_content,
                 },
                 "tags": _clean_tags(tags),
                 "updatedAt": now,
             },
         }
-        return self._upsert_node(project_id, node, "requirement")
+        return self._upsert_node(project_id, node, "requirement", source_node_ids=source_node_ids)
 
     def upsert_source_snapshot(
         self,
@@ -233,13 +228,14 @@ class CanvasStore:
                 "canvasType": "source_snapshot",
                 "title": clean_title,
                 "fields": {
-                    "sourceType": source_type.strip() or "manual",
-                    "sourceId": source_id.strip() or resolved_node_id,
-                    "sourceUrl": source_url.strip(),
-                    "rawText": raw_text.strip(),
-                    "summary": clean_summary,
-                    "fetchedAt": now,
-                    "metadata": "Added through Context Canvas MCP.",
+                    "content": _source_snapshot_content(
+                        source_type=source_type,
+                        source_id=source_id or resolved_node_id,
+                        source_url=source_url,
+                        raw_text=raw_text,
+                        summary=clean_summary,
+                        fetched_at=now,
+                    ),
                 },
                 "tags": _clean_tags(tags or ["source"]),
                 "updatedAt": now,
@@ -247,7 +243,14 @@ class CanvasStore:
         }
         return self._upsert_node(project_id, node, "source snapshot")
 
-    def _upsert_node(self, project_id: str, node: dict[str, Any], label: str) -> CanvasMutationResult:
+    def _upsert_node(
+        self,
+        project_id: str,
+        node: dict[str, Any],
+        label: str,
+        source_node_ids: list[str] | None = None,
+    ) -> CanvasMutationResult:
+        node = _normalize_canvas_node(node)
         with self._connect() as connection:
             project = connection.execute("SELECT id FROM projects WHERE id = ?", (project_id,)).fetchone()
             if not project:
@@ -277,7 +280,7 @@ class CanvasStore:
                 )
                 status = "created"
             if _canvas_type(node) == "requirement":
-                self._sync_source_edges(connection, project_id, node, now)
+                self._sync_source_edges(connection, project_id, str(node["id"]), source_node_ids or [], now)
             connection.execute("UPDATE projects SET updated_at = ? WHERE id = ?", (now, project_id))
             connection.commit()
         return CanvasMutationResult(
@@ -302,10 +305,14 @@ class CanvasStore:
         return connection
 
     @staticmethod
-    def _sync_source_edges(connection: sqlite3.Connection, project_id: str, node: dict[str, Any], now: str) -> None:
-        fields = ((node.get("data") or {}).get("fields") or {}) if isinstance(node.get("data"), dict) else {}
-        source_ids = [item.strip() for item in str(fields.get("sourceNodeIds") or "").split(",") if item.strip()]
-        target_id = str(node["id"])
+    def _sync_source_edges(
+        connection: sqlite3.Connection,
+        project_id: str,
+        target_id: str,
+        source_node_ids: list[str],
+        now: str,
+    ) -> None:
+        source_ids = [item.strip() for item in source_node_ids if item.strip()]
         if not source_ids:
             return
         connection.execute(
@@ -347,14 +354,14 @@ class CanvasStore:
 def _node_summary(node: dict[str, Any]) -> CanvasNodeSummary:
     data = node.get("data") if isinstance(node.get("data"), dict) else {}
     fields = data.get("fields") if isinstance(data.get("fields"), dict) else {}
-    body = str(fields.get("body") or fields.get("summary") or fields.get("goal") or fields.get("rawText") or "")
+    body = str(fields.get("content") or "")
     return CanvasNodeSummary(
         id=str(node.get("id") or ""),
         title=str(data.get("title") or node.get("id") or "Untitled node"),
         canvas_type=str(data.get("canvasType") or "unknown"),
         body=body,
         tags=[str(tag) for tag in data.get("tags") or []],
-        source_node_ids=[item.strip() for item in str(fields.get("sourceNodeIds") or "").split(",") if item.strip()],
+        source_node_ids=[],
     )
 
 
@@ -403,6 +410,98 @@ def _loads(value: str | None, fallback: Any) -> Any:
         return json.loads(value)
     except json.JSONDecodeError:
         return fallback
+
+
+def _normalize_canvas_node(node: dict[str, Any]) -> dict[str, Any]:
+    data = node.get("data")
+    if not isinstance(data, dict):
+        return node
+
+    fields = data.get("fields")
+    if not isinstance(fields, dict):
+        normalized = dict(node)
+        normalized["data"] = {**data, "fields": {"content": ""}}
+        return normalized
+    if set(fields.keys()) == {"content"}:
+        return node
+
+    normalized = dict(node)
+    normalized["data"] = {**data, "fields": {"content": _content_from_legacy_fields(fields)}}
+    return normalized
+
+
+def _source_snapshot_content(
+    source_type: str,
+    source_id: str,
+    source_url: str,
+    raw_text: str,
+    summary: str,
+    fetched_at: str,
+) -> str:
+    parts = [
+        source_url.strip(),
+        summary.strip(),
+        raw_text.strip(),
+        f"Source type\n{source_type.strip() or 'manual'}",
+        f"Source ID\n{source_id.strip()}",
+        f"Fetched at\n{fetched_at}",
+        "Added through Context Canvas MCP.",
+    ]
+    return "\n\n".join(part for part in parts if part)
+
+
+def _content_from_legacy_fields(fields: dict[str, Any]) -> str:
+    content = str(fields.get("content") or "").strip()
+    ordered_keys = [
+        "assetUrl",
+        "url",
+        "sourceUrl",
+        "body",
+        "summary",
+        "rawText",
+        "notes",
+        "extractedText",
+        "goal",
+        "scope",
+        "nonGoals",
+        "requirements",
+        "acceptanceCriteria",
+        "constraints",
+        "definitionOfDone",
+        "sourceType",
+        "sourceId",
+        "priority",
+        "status",
+        "sourceNodeIds",
+        "fetchedAt",
+        "lastFetchedAt",
+        "metadata",
+    ]
+    legacy_parts: list[str] = [content] if content else []
+    seen = {"content"}
+    for key in ordered_keys + sorted(str(field) for field in fields.keys()):
+        if key in seen:
+            continue
+        seen.add(key)
+        value = fields.get(key)
+        if str(value or "").strip():
+            legacy_parts.append(_legacy_field_text(key, value))
+    return "\n\n".join(legacy_parts)
+
+
+def _legacy_field_text(key: str, value: Any) -> str:
+    text = str(value).strip()
+    if key == "assetUrl":
+        return f"![Uploaded image]({text})"
+    if key in {"url", "sourceUrl"}:
+        return text
+    return f"{_title_case_field(key)}\n{text}"
+
+
+def _title_case_field(value: str) -> str:
+    words = value.replace("_", " ").replace("-", " ")
+    words = "".join(f" {char}" if char.isupper() else char for char in words).split()
+    return " ".join(word.upper() if word.lower() in {"id", "ids", "url", "urls", "api"} else word.capitalize() for word in words)
 
 
 def _json(value: Any) -> str:

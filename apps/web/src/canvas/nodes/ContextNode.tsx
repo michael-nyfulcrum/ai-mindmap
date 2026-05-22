@@ -13,18 +13,11 @@ const nodeIcons: Record<CanvasNodeType, typeof FileText> = {
   source_snapshot: AlertCircle,
 };
 
-const previewFields: Partial<Record<CanvasNodeType, string[]>> = {
-  project_contract: ["goal", "scope"],
-  note: ["body"],
-  requirement: ["body", "priority", "status"],
-  image: ["altText", "notes"],
-  link: ["sourceType", "url", "summary"],
-  source_snapshot: ["sourceType", "summary", "fetchedAt"],
-};
-
 export const ContextNode = memo(function ContextNode({ data, selected }: NodeProps<CanvasFlowNode>) {
   const Icon = nodeIcons[data.canvasType];
-  const fieldKeys = previewFields[data.canvasType] ?? [];
+  const content = data.fields.content ?? "";
+  const imageUrl = data.canvasType === "image" ? imageUrlFromContent(content) : "";
+  const preview = previewText(content);
 
   return (
     <article className={`context-node context-node-${data.canvasType} ${selected ? "is-active" : ""} ${data.highlighted ? "is-highlighted" : ""}`}>
@@ -39,22 +32,10 @@ export const ContextNode = memo(function ContextNode({ data, selected }: NodePro
         </div>
       </header>
       <div className="context-node-body">
-        {data.canvasType === "image" && data.fields.assetUrl ? (
-          <img className="context-node-image-preview" src={data.fields.assetUrl} alt={data.fields.altText || data.title} />
+        {imageUrl ? (
+          <img className="context-node-image-preview" src={imageUrl} alt={data.title} />
         ) : null}
-        {fieldKeys.map((key) => {
-          const value = data.fields[key];
-          if (!value) {
-            return null;
-          }
-
-          return (
-            <p key={key}>
-              <strong>{titleCaseField(key)}</strong>
-              <span>{value}</span>
-            </p>
-          );
-        })}
+        {preview ? <p>{preview}</p> : null}
       </div>
       {data.tags.length > 0 ? (
         <footer className="context-node-tags">
@@ -68,19 +49,18 @@ export const ContextNode = memo(function ContextNode({ data, selected }: NodePro
   );
 });
 
-function titleCaseField(value: string) {
-  return value
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .replace(/[_-]+/g, " ")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((word) => {
-      const lower = word.toLowerCase();
-      if (["id", "ids", "url", "urls", "api"].includes(lower)) {
-        return lower.toUpperCase();
-      }
-      return lower === "ai" ? "AI" : lower.charAt(0).toUpperCase() + lower.slice(1);
-    })
-    .join(" ");
+function imageUrlFromContent(content: string) {
+  const markdownImage = content.match(/!\[[^\]]*]\(([^)]+)\)/);
+  if (markdownImage?.[1]) {
+    return markdownImage[1].trim();
+  }
+  const firstUrl = content.match(/https?:\/\/\S+/);
+  return firstUrl?.[0] ?? "";
+}
+
+function previewText(content: string) {
+  return content
+    .replace(/!\[[^\]]*]\([^)]+\)/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }

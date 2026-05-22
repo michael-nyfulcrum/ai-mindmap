@@ -55,9 +55,7 @@ class McpCanvasContextE2ETest(ApiE2ECase):
                         "project_id": project_id,
                         "node_id": "node_requirement_agent_context",
                         "title": "Agent Context Tooling",
-                        "body": "Coding agents can read and update the saved requirements canvas through MCP.",
-                        "priority": "High",
-                        "status": "Ready",
+                        "content": "Coding agents can read and update the saved requirements canvas through MCP.",
                         "source_node_ids": ["node_contract"],
                         "tags": ["agent", "mcp"],
                     },
@@ -75,8 +73,7 @@ class McpCanvasContextE2ETest(ApiE2ECase):
         titles = [node["data"]["title"] for node in api_snapshot["nodes"]]
         self.assertIn("Agent Context Tooling", titles)
         stored_node = next(node for node in api_snapshot["nodes"] if node["id"] == "node_requirement_agent_context")
-        self.assertEqual(stored_node["data"]["fields"]["priority"], "High")
-        self.assertEqual(stored_node["data"]["fields"]["sourceNodeIds"], "node_contract")
+        self.assertEqual(stored_node["data"]["fields"], {"content": "Coding agents can read and update the saved requirements canvas through MCP."})
         self.assertTrue(
             any(
                 edge["source"] == "node_contract"

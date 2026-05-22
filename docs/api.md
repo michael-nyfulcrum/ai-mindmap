@@ -79,23 +79,25 @@ Create body:
 
 ```json
 {
-  "id": "node_requirement_1",
+  "id": "node_contract",
   "type": "contextNode",
   "position": { "x": 100, "y": 100 },
   "data": {
-    "canvasType": "requirement",
-    "title": "Requirement title",
+    "canvasType": "project_contract",
+    "title": "Client CR Contract",
     "fields": {
-      "body": "Requirement body",
-      "priority": "High",
-      "status": "Draft",
-      "sourceNodeIds": ""
+      "content": "Large project contract body with scope, requirements, constraints, acceptance notes, and decision context."
     },
-    "tags": [],
+    "tags": ["client-cr", "source-of-truth"],
     "updatedAt": "2026-05-14T00:00:00.000Z"
   }
 }
 ```
+
+All node types intentionally keep editable content in one large `content` field.
+Metadata should stay on the node wrapper, such as `title`, `tags`, `updatedAt`,
+and graph relationships. Do not add type-specific form fields such as priority,
+status, source URL, or summary.
 
 Deleting a node also deletes connected edges.
 

@@ -199,7 +199,7 @@ export function CanvasPage() {
         data: {
           canvasType: type,
           title: patch?.title ?? `New ${type.replaceAll("_", " ")}`,
-          fields: { ...defaultFieldsForType(type), ...(patch?.fields ?? {}) },
+          fields: { ...defaultFieldsForType(), ...(patch?.fields ?? {}) },
           tags: patch?.tags ?? [],
           updatedAt: timestamp,
         },
@@ -234,10 +234,7 @@ export function CanvasPage() {
         addNode("image", {
           title: file.name,
           fields: {
-            assetUrl: upload.url,
-            altText: file.name,
-            notes: "",
-            extractedText: "",
+            content: `![${file.name}](${upload.url})`,
           },
         });
       } catch {

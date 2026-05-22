@@ -32,7 +32,7 @@ Use the canvas to prepare and review a client-facing change request package.
 
 The seeded example is `GGR-5534 Help Center Change Request`, which shows:
 
-- A central project contract.
+- A central project contract and surrounding nodes that each use one large editable content body with lightweight metadata such as title, tags, update time, and relationships.
 - Jira and Confluence source snapshots.
 - A Figma reference link.
 - Requirement nodes for access, content, support submission, and client CR output.
@@ -74,6 +74,20 @@ The seeded example is `GGR-5534 Help Center Change Request`, which shows:
 - Cite source node IDs from requirements.
 - Coding agents can read and update saved canvas context through MCP.
 - External source fetching, search, and Slack workflows are later improvements.
+
+## Node Content Shape
+
+Every canvas node is intentionally minimal:
+
+- `title`
+- `tags`
+- `updatedAt`
+- `fields.content`
+
+Do not split nodes into separate goal, scope, non-goals, requirements,
+acceptance criteria, definition-of-done, priority, status, source URL, summary,
+or other type-specific form fields. Those details can still exist inside the
+single content body when useful.
 
 ## In Scope
 

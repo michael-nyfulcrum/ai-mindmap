@@ -65,7 +65,7 @@ def make_node(node_id: str, title: str, canvas_type: str = "requirement") -> dic
         "data": {
             "canvasType": canvas_type,
             "title": title,
-            "fields": {"body": title, "priority": "Medium", "status": "Draft"},
+            "fields": {"content": title},
             "tags": [],
             "updatedAt": "2026-05-14T00:00:00.000Z",
         },

@@ -23,10 +23,10 @@ export function CanvasInspector({
     return allEdges.filter((edge) => edge.source === activeNode.id || edge.target === activeNode.id);
   }, [activeNode, allEdges]);
 
-  const updateField = (field: string, value: string) => {
+  const updateContent = (value: string) => {
     onUpdateNode(activeNode.id, {
       ...activeNode.data,
-      fields: { ...activeNode.data.fields, [field]: value },
+      fields: { content: value },
       updatedAt: new Date().toISOString(),
     });
   };
@@ -81,18 +81,12 @@ export function CanvasInspector({
         </section>
 
         <section className="inspector-section">
-          <h3>Fields</h3>
+          <h3>Content</h3>
           <div className="form-stack">
-            {Object.entries(activeNode.data.fields).map(([field, value]) => (
-              <label key={field}>
-                <span>{titleCaseField(field)}</span>
-                {value.length > 80 || ["body", "summary", "rawText", "scope", "requirements", "acceptanceCriteria"].includes(field) ? (
-                  <Textarea value={value} onChange={(event) => updateField(field, event.target.value)} rows={5} />
-                ) : (
-                  <input value={value} onChange={(event) => updateField(field, event.target.value)} />
-                )}
-              </label>
-            ))}
+            <label>
+              <span>Content</span>
+              <Textarea value={activeNode.data.fields.content ?? ""} onChange={(event) => updateContent(event.target.value)} rows={10} />
+            </label>
           </div>
         </section>
 

@@ -52,10 +52,10 @@ float stars(vec2 uv, float scale, float speed) {
   vec2 cell = floor(p);
   vec2 local = fract(p) - 0.5;
   float rnd = hash(cell);
-  float star = smoothstep(0.045, 0.0, length(local));
-  float glow = smoothstep(0.18, 0.0, length(local)) * 0.16;
-  float twinkle = 0.45 + 0.55 * sin(uTime * (2.2 + rnd * 6.0) + rnd * 6.28);
-  return (star + glow) * step(0.925, rnd) * twinkle;
+  float star = smoothstep(0.038, 0.0, length(local));
+  float glow = smoothstep(0.13, 0.0, length(local)) * 0.1;
+  float twinkle = 0.62 + 0.38 * sin(uTime * (0.38 + rnd * 1.12) + rnd * 6.28);
+  return (star + glow) * step(0.964, rnd) * twinkle;
 }
 
 void main() {
@@ -74,31 +74,34 @@ void main() {
   float cloudA = fbm(p * 2.35 + vec2(t * 1.8, -t * 1.1));
   float cloudB = fbm(p * 3.45 + vec2(-t * 1.2, t * 1.7));
   float galaxyArms = (arm * 0.52 + arm2 * 0.26) * disk;
-  float nebula = smoothstep(0.16, 0.84, cloudA * 0.48 + cloudB * 0.32 + galaxyArms * 0.64 + core * 0.58);
+  float nebula = smoothstep(0.2, 0.88, cloudA * 0.42 + cloudB * 0.28 + galaxyArms * 0.54 + core * 0.48);
+  float darkPockets = smoothstep(0.24, 0.72, fbm(p * 1.45 + vec2(-2.4, 5.1)));
 
-  vec3 deep = vec3(0.035, 0.055, 0.12);
-  vec3 blue = vec3(0.16, 0.56, 0.95);
-  vec3 violet = vec3(0.48, 0.26, 0.98);
-  vec3 pink = vec3(0.98, 0.32, 0.75);
-  vec3 mint = vec3(0.24, 0.95, 0.72);
+  vec3 deep = vec3(0.022, 0.034, 0.074);
+  vec3 blue = vec3(0.13, 0.46, 0.78);
+  vec3 violet = vec3(0.36, 0.2, 0.72);
+  vec3 pink = vec3(0.76, 0.24, 0.58);
+  vec3 mint = vec3(0.2, 0.74, 0.6);
 
   vec3 color = deep;
-  color = mix(color, blue, nebula * 0.42);
-  color = mix(color, violet, smoothstep(0.08, 0.78, cloudB) * 0.32);
-  color = mix(color, pink, galaxyArms * 0.58);
-  color = mix(color, mint, core * 0.18);
+  color = mix(color, blue, nebula * 0.34);
+  color = mix(color, violet, smoothstep(0.1, 0.82, cloudB) * 0.26);
+  color = mix(color, pink, galaxyArms * 0.42);
+  color = mix(color, mint, core * 0.14);
 
-  float starField = stars(uv, 54.0, 0.018) + stars(uv + 0.27, 104.0, -0.014) * 0.82 + stars(uv + 0.61, 156.0, 0.01) * 0.44;
-  float brightStars = stars(uv + vec2(0.13, -0.21), 28.0, -0.008);
-  color += vec3(starField) * vec3(0.88, 0.94, 1.0);
-  color += vec3(brightStars) * vec3(1.0, 0.88, 0.72) * 1.35;
-  color += core * vec3(0.28, 0.26, 0.44);
-  color += galaxyArms * vec3(0.08, 0.12, 0.22);
+  color *= mix(0.58, 1.0, darkPockets);
+
+  float starField = stars(uv, 36.0, 0.006) + stars(uv + 0.27, 68.0, -0.005) * 0.68 + stars(uv + 0.61, 98.0, 0.004) * 0.32;
+  float brightStars = stars(uv + vec2(0.13, -0.21), 18.0, -0.003);
+  color += vec3(starField) * vec3(0.76, 0.84, 0.94);
+  color += vec3(brightStars) * vec3(0.9, 0.76, 0.56) * 0.92;
+  color += core * vec3(0.18, 0.17, 0.3);
+  color += galaxyArms * vec3(0.06, 0.09, 0.16);
 
   float vignette = smoothstep(0.92, 0.18, length(p));
-  color *= 0.68 + vignette * 0.46;
+  color *= 0.62 + vignette * 0.42;
 
-  gl_FragColor = vec4(color, 0.78);
+  gl_FragColor = vec4(color, 0.84);
 }
 `;
 

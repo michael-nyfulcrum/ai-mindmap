@@ -187,10 +187,7 @@ class UploadAnalysisChatE2ETest(ApiE2ECase):
 def source_snapshot(node_id: str, title: str) -> dict[str, object]:
     node = make_node(node_id, title, "source_snapshot")
     node["data"]["fields"] = {
-        "sourceType": "manual",
-        "sourceId": node_id,
-        "summary": title,
-        "fetchedAt": "2026-05-14T00:00:00.000Z",
+        "content": title,
     }
     node["data"]["tags"] = ["source"]
     return node

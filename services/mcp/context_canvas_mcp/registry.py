@@ -154,9 +154,7 @@ def register_capabilities(app: FastMCP) -> None:
     def upsert_requirement_node(
         project_id: str,
         title: str,
-        body: str,
-        priority: str = "Medium",
-        status: str = "Draft",
+        content: str,
         source_node_ids: list[str] | None = None,
         tags: list[str] | None = None,
         node_id: str | None = None,
@@ -164,9 +162,7 @@ def register_capabilities(app: FastMCP) -> None:
         return CanvasStore.from_settings().upsert_requirement(
             project_id=project_id,
             title=title,
-            body=body,
-            priority=priority,
-            status=status,
+            content=content,
             source_node_ids=source_node_ids,
             tags=tags,
             node_id=node_id,

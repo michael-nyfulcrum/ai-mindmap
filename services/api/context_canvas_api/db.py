@@ -347,7 +347,7 @@ class AppDatabase:
         if not project:
             return None
         nodes = [
-            json.loads(row["payload_json"])
+            _normalize_canvas_node(json.loads(row["payload_json"]))
             for row in self.connection.execute(
                 "SELECT payload_json FROM canvas_nodes WHERE project_id = ? ORDER BY created_at ASC",
                 (project_id,),
@@ -401,7 +401,7 @@ class AppDatabase:
         if not self.get_project(project_id):
             return None
         now = utc_now()
-        node = {**node, "id": node.get("id") or f"node_{uuid4().hex}"}
+        node = _normalize_canvas_node({**node, "id": node.get("id") or f"node_{uuid4().hex}"})
         self._insert_node(project_id, node, now)
         self._touch_project(project_id, now)
         self.connection.commit()
@@ -411,7 +411,7 @@ class AppDatabase:
         current = self._get_node(project_id, node_id)
         if not current:
             return None
-        updated = _deep_merge(current, patch)
+        updated = _normalize_canvas_node(_deep_merge(current, patch))
         updated["id"] = node_id
         now = utc_now()
         self.connection.execute(
@@ -613,6 +613,7 @@ class AppDatabase:
         self.connection.commit()
 
     def _insert_node(self, project_id: str, node: dict[str, Any], now: str) -> None:
+        node = _normalize_canvas_node(node)
         self.connection.execute(
             """
             INSERT INTO canvas_nodes (id, project_id, payload_json, created_at, updated_at)
@@ -693,6 +694,78 @@ def _same_saved_canvas(existing: CanvasSnapshot, incoming: CanvasSnapshot) -> bo
         and _canonical_json(existing.nodes) == _canonical_json(incoming.nodes)
         and _canonical_json(existing.edges) == _canonical_json(incoming.edges)
     )
+
+
+def _normalize_canvas_node(node: dict[str, Any]) -> dict[str, Any]:
+    data = node.get("data")
+    if not isinstance(data, dict):
+        return node
+
+    fields = data.get("fields")
+    if not isinstance(fields, dict):
+        normalized = dict(node)
+        normalized["data"] = {**data, "fields": {"content": ""}}
+        return normalized
+    if set(fields.keys()) == {"content"}:
+        return node
+
+    normalized = dict(node)
+    normalized["data"] = {**data, "fields": {"content": _content_from_legacy_fields(fields)}}
+    return normalized
+
+
+def _content_from_legacy_fields(fields: dict[str, Any]) -> str:
+    content = str(fields.get("content") or "").strip()
+    ordered_keys = [
+        "assetUrl",
+        "url",
+        "sourceUrl",
+        "body",
+        "summary",
+        "rawText",
+        "notes",
+        "extractedText",
+        "goal",
+        "scope",
+        "nonGoals",
+        "requirements",
+        "acceptanceCriteria",
+        "constraints",
+        "definitionOfDone",
+        "sourceType",
+        "sourceId",
+        "priority",
+        "status",
+        "sourceNodeIds",
+        "fetchedAt",
+        "lastFetchedAt",
+        "metadata",
+    ]
+    legacy_parts: list[str] = [content] if content else []
+    seen = {"content"}
+    for key in ordered_keys + sorted(str(field) for field in fields.keys()):
+        if key in seen:
+            continue
+        seen.add(key)
+        value = fields.get(key)
+        if str(value or "").strip():
+            legacy_parts.append(_legacy_field_text(key, value))
+    return "\n\n".join(legacy_parts)
+
+
+def _legacy_field_text(key: str, value: Any) -> str:
+    text = str(value).strip()
+    if key == "assetUrl":
+        return f"![Uploaded image]({text})"
+    if key in {"url", "sourceUrl"}:
+        return text
+    return f"{_title_case_field(key)}\n{text}"
+
+
+def _title_case_field(value: str) -> str:
+    words = value.replace("_", " ").replace("-", " ")
+    words = "".join(f" {char}" if char.isupper() else char for char in words).split()
+    return " ".join(word.upper() if word.lower() in {"id", "ids", "url", "urls", "api"} else word.capitalize() for word in words)
 
 
 def _loads(value: str, fallback: Any) -> Any:

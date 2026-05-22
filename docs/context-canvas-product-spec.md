@@ -30,6 +30,10 @@ The FastAPI service is the system of record for product data. It owns:
 - Chat threads.
 - Chat messages.
 
+All canvas nodes use one large editable `fields.content` body plus node-level
+metadata such as title, tags, updated time, and relationships. Nodes should not
+be modeled as many separate type-specific detail fields.
+
 The MCP service can read saved canvas context and write requirement/source nodes to the same SQLite database for coding-agent workflows. Jira, Confluence, Slack, and broader external-app workflows are later improvements.
 
 ## Current Feature Progress

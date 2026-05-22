@@ -94,55 +94,10 @@ export const EDGE_RELATIONSHIPS = [
   "test coverage",
 ] as const;
 
-export function defaultFieldsForType(type: CanvasNodeType): Record<string, string> {
-  switch (type) {
-    case "project_contract":
-      return {
-        goal: "",
-        scope: "",
-        nonGoals: "",
-        requirements: "",
-        acceptanceCriteria: "",
-        constraints: "",
-        definitionOfDone: "",
-      };
-    case "requirement":
-      return {
-        body: "",
-        priority: "Medium",
-        status: "Draft",
-        sourceNodeIds: "",
-      };
-    case "image":
-      return {
-        assetUrl: "",
-        altText: "",
-        notes: "",
-        extractedText: "",
-      };
-    case "link":
-      return {
-        url: "",
-        sourceType: "generic",
-        summary: "",
-        lastFetchedAt: "",
-      };
-    case "source_snapshot":
-      return {
-        sourceType: "generic",
-        sourceId: "",
-        sourceUrl: "",
-        rawText: "",
-        summary: "",
-        fetchedAt: "",
-        metadata: "",
-      };
-    case "note":
-    default:
-      return {
-        body: "",
-      };
-  }
+export function defaultFieldsForType(): Record<string, string> {
+  return {
+    content: "",
+  };
 }
 
 export function titleForType(type: CanvasNodeType) {

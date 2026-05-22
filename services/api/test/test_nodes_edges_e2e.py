@@ -23,12 +23,11 @@ class NodeAndEdgeE2ETest(ApiE2ECase):
 
         patched_node = self.client.patch(
             f"/api/projects/{project_id}/nodes/node_b",
-            json={"data": {"title": "Updated requirement", "fields": {"priority": "High"}}},
+            json={"data": {"title": "Updated requirement", "fields": {"content": "Updated requirement detail"}}},
         )
         self.assertEqual(patched_node.status_code, 200)
         self.assertEqual(patched_node.json()["data"]["title"], "Updated requirement")
-        self.assertEqual(patched_node.json()["data"]["fields"]["priority"], "High")
-        self.assertEqual(patched_node.json()["data"]["fields"]["body"], "Requirement")
+        self.assertEqual(patched_node.json()["data"]["fields"], {"content": "Updated requirement detail"})
 
         patched_edge = self.client.patch(
             f"/api/projects/{project_id}/edges/edge_a_b",

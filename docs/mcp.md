@@ -35,7 +35,7 @@ Agents such as Codex or Claude should:
 3. Use the returned Markdown as the source of truth for requirements.
 4. Call `upsert_requirement_node` or `upsert_source_snapshot_node` when implementation decisions change the project context.
 
-When `upsert_requirement_node` receives `source_node_ids`, it stores those IDs on the requirement and creates MCP-managed `supports` edges for existing source nodes.
+When `upsert_requirement_node` receives `source_node_ids`, it creates MCP-managed `supports` edges for existing source nodes. The requirement node itself still stores its editable text only in `fields.content`.
 
 ## Canvas Tools
 

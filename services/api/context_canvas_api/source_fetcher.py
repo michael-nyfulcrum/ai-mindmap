@@ -59,13 +59,13 @@ def _snapshot_from_document(document: dict[str, Any]) -> dict[str, Any]:
             "canvasType": "source_snapshot",
             "title": title,
             "fields": {
-                "sourceType": source_type,
-                "sourceId": source_id,
-                "sourceUrl": source_url,
-                "rawText": content,
-                "summary": _summary(content),
-                "fetchedAt": "",
-                "metadata": _metadata(document),
+                "content": _snapshot_content(
+                    source_type=source_type,
+                    source_id=source_id,
+                    source_url=source_url,
+                    content=content,
+                    metadata=_metadata(document),
+                ),
             },
             "tags": ["source", source_type],
             "updatedAt": "",
@@ -90,6 +90,18 @@ def infer_source_type(url_or_id: str) -> str:
 def _summary(content: str) -> str:
     compact = " ".join(content.split())
     return compact[:240]
+
+
+def _snapshot_content(source_type: str, source_id: str, source_url: str, content: str, metadata: str) -> str:
+    parts = [
+        source_url,
+        _summary(content),
+        content,
+        f"Source type\n{source_type}",
+        f"Source ID\n{source_id}",
+        metadata,
+    ]
+    return "\n\n".join(part for part in parts if part)
 
 
 def _metadata(document: dict[str, Any]) -> str:
