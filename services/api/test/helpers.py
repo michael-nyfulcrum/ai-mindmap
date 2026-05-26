@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import tempfile
 import unittest
@@ -13,6 +14,8 @@ from context_canvas_api.app import create_app
 
 class ApiE2ECase(unittest.TestCase):
     def setUp(self) -> None:
+        self.previous_change_ai = os.environ.get("CONTEXT_CANVAS_DISABLE_CHANGE_AI")
+        os.environ["CONTEXT_CANVAS_DISABLE_CHANGE_AI"] = "1"
         self.tmpdir = tempfile.TemporaryDirectory()
         self.root = Path(self.tmpdir.name)
         self.db_path = self.root / "context-canvas.sqlite"
@@ -30,6 +33,10 @@ class ApiE2ECase(unittest.TestCase):
     def tearDown(self) -> None:
         self.client.__exit__(None, None, None)
         self.tmpdir.cleanup()
+        if self.previous_change_ai is None:
+            os.environ.pop("CONTEXT_CANVAS_DISABLE_CHANGE_AI", None)
+        else:
+            os.environ["CONTEXT_CANVAS_DISABLE_CHANGE_AI"] = self.previous_change_ai
 
     def create_project(self, name: str = "E2E canvas") -> str:
         response = self.client.post("/api/projects", json={"name": name})

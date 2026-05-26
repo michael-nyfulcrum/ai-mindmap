@@ -32,9 +32,39 @@ class McpCanvasContextE2ETest(ApiE2ECase):
         ]
         snapshot["edges"] = [make_edge("edge_contract_initial", "node_contract", "node_requirement_initial", "defines")]
         self.assertEqual(self.client.put(f"/api/projects/{project_id}/canvas", json=snapshot).status_code, 200)
+        self.assertEqual(
+            self.client.patch(
+                f"/api/projects/{project_id}/nodes/node_contract",
+                json={"data": {"fields": {"content": "Agent contract now requires MCP handoff context."}}},
+            ).status_code,
+            200,
+        )
 
         async def scenario() -> None:
             async with Client(create_mcp_app()) as mcp:
+                tools = await mcp.list_tools()
+                tool_names = {tool.name for tool in tools}
+                self.assertTrue(
+                    {
+                        "list_canvas_projects",
+                        "get_canvas_snapshot",
+                        "get_canvas_context",
+                        "upsert_requirement_node",
+                        "upsert_source_snapshot_node",
+                        "summarize_canvas_nodes",
+                    }.issubset(tool_names)
+                )
+                prompts = await mcp.list_prompts()
+                prompt_names = {prompt.name for prompt in prompts}
+                self.assertIn("use_context_canvas_for_task", prompt_names)
+                resources = await mcp.list_resources()
+                resource_uris = {str(resource.uri) for resource in resources}
+                self.assertIn("context-canvas://projects", resource_uris)
+                prompt = await mcp.get_prompt("use_context_canvas_for_task", {"task": "Implement the agent-facing requirements flow."})
+                self.assertIn("get_canvas_context", str(prompt))
+                projects_resource = await mcp.read_resource("context-canvas://projects")
+                self.assertIn(project_id, str(projects_resource))
+
                 projects = await mcp.call_tool("list_canvas_projects", {"limit": 10})
                 project_payload = _first_content(projects)
                 self.assertIn(project_id, str(project_payload))
@@ -48,6 +78,9 @@ class McpCanvasContextE2ETest(ApiE2ECase):
                 markdown = context_payload["context"]["markdown"]
                 self.assertIn("Initial saved requirement", markdown)
                 self.assertIn("Implement the agent-facing requirements flow.", markdown)
+                self.assertIn("## Active Impact Flags", markdown)
+                self.assertIn("node_requirement_initial", markdown)
+                self.assertIn("## Recent Contract Changes", markdown)
 
                 upserted = await mcp.call_tool(
                     "upsert_requirement_node",
@@ -62,8 +95,23 @@ class McpCanvasContextE2ETest(ApiE2ECase):
                 )
                 self.assertEqual(_first_content(upserted)["status"], "created")
 
+                cleared_sources = await mcp.call_tool(
+                    "upsert_requirement_node",
+                    {
+                        "project_id": project_id,
+                        "node_id": "node_requirement_agent_context",
+                        "title": "Agent Context Tooling",
+                        "content": "Coding agents can read and update saved requirements through MCP after implementation decisions.",
+                        "source_node_ids": [],
+                        "tags": ["agent", "mcp"],
+                    },
+                )
+                self.assertEqual(_first_content(cleared_sources)["status"], "updated")
+
                 updated_context = await mcp.call_tool("get_canvas_context", {"project_id": project_id})
                 self.assertIn("Agent Context Tooling", _first_content(updated_context)["context"]["markdown"])
+                project_resource = await mcp.read_resource(f"context-canvas://project/{project_id}/context")
+                self.assertIn("Agent Context Tooling", str(project_resource))
 
         import asyncio
 
@@ -73,12 +121,22 @@ class McpCanvasContextE2ETest(ApiE2ECase):
         titles = [node["data"]["title"] for node in api_snapshot["nodes"]]
         self.assertIn("Agent Context Tooling", titles)
         stored_node = next(node for node in api_snapshot["nodes"] if node["id"] == "node_requirement_agent_context")
-        self.assertEqual(stored_node["data"]["fields"], {"content": "Coding agents can read and update the saved requirements canvas through MCP."})
-        self.assertTrue(
+        self.assertEqual(
+            stored_node["data"]["fields"],
+            {"content": "Coding agents can read and update saved requirements through MCP after implementation decisions."},
+        )
+        self.assertEqual(stored_node["data"]["audit"]["createdBy"], "context_canvas_mcp")
+        self.assertEqual(
+            self.sqlite_scalar(
+                "SELECT created_by FROM contract_change_versions WHERE project_id = ? AND node_id = ?",
+                (project_id, "node_requirement_agent_context"),
+            ),
+            "context_canvas_mcp",
+        )
+        self.assertFalse(
             any(
-                edge["source"] == "node_contract"
-                and edge["target"] == "node_requirement_agent_context"
-                and edge["data"]["managedBy"] == "context_canvas_mcp"
+                edge["target"] == "node_requirement_agent_context"
+                and edge["data"].get("managedBy") == "context_canvas_mcp"
                 for edge in api_snapshot["edges"]
             )
         )

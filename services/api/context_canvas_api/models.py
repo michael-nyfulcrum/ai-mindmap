@@ -52,6 +52,34 @@ class AnalysisResponse(BaseModel):
     citations: list[Citation] = Field(default_factory=list)
 
 
+ImpactStatus = Literal["review", "outdated", "needs_update", "conflict"]
+
+
+class ChangeImpact(BaseModel):
+    nodeId: str
+    title: str
+    status: ImpactStatus
+    reason: str
+    sourceNodeId: str
+    sourceVersionId: str
+    updatedAt: str
+
+
+class ContractChangeVersion(BaseModel):
+    id: str
+    projectId: str
+    nodeId: str
+    nodeTitle: str
+    nodeType: CanvasNodeType
+    versionNumber: int
+    changeType: Literal["created", "updated", "deleted"]
+    summary: str
+    changedFields: list[str] = Field(default_factory=list)
+    affectedNodes: list[ChangeImpact] = Field(default_factory=list)
+    createdBy: str
+    createdAt: str
+
+
 class ChatThread(BaseModel):
     id: str
     projectId: str

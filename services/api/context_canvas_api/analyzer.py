@@ -4,7 +4,7 @@ import json
 import os
 from typing import Any
 
-from context_canvas_api.models import AnalysisResponse, CanvasSnapshot
+from context_canvas_api.models import AnalysisResponse, CanvasSnapshot, ChangeImpact
 
 
 class AIProviderError(RuntimeError):
@@ -70,6 +70,34 @@ Rules:
 """.strip()
 
 
+CHANGE_IMPACT_INSTRUCTIONS = """
+You are Context Canvas AI, a senior requirements change-control analyst.
+
+Use only the supplied saved canvas, changed node before/after payloads, changed
+fields, and candidate affected nodes. Return exactly one JSON object and no
+Markdown. The object must match this contract:
+{
+  "summary": "imperative changelog-style summary under 140 characters",
+  "affectedNodes": [
+    {
+      "nodeId": "candidate-node-id",
+      "status": "review" | "outdated" | "needs_update" | "conflict",
+      "reason": "specific reason grounded in the changed requirement or contract"
+    }
+  ]
+}
+
+Rules:
+- Choose only node IDs from candidateAffectedNodes.
+- Prefer "conflict" only when the candidate appears incompatible with the new text.
+- Prefer "outdated" when the candidate reflects old wording or decisions.
+- Prefer "needs_update" when the candidate should be revised for parity.
+- Prefer "review" when the candidate is connected and may be affected but the
+  saved context is insufficient for a stronger status.
+- Keep the summary useful as a version-history entry.
+""".strip()
+
+
 def analyze_canvas(snapshot: CanvasSnapshot, question: str) -> AnalysisResponse:
     client = _openai_client()
     response = client.responses.create(
@@ -103,6 +131,68 @@ def chat_with_canvas(
     if not content:
         raise AIProviderError("OpenAI returned an empty chat response.")
     return content, analysis
+
+
+def analyze_change_impact(
+    snapshot: CanvasSnapshot,
+    before_node: dict[str, Any] | None,
+    after_node: dict[str, Any] | None,
+    changed_fields: list[str],
+    candidate_nodes: list[dict[str, Any]],
+    source_version_id: str,
+    changed_at: str,
+) -> tuple[str, list[ChangeImpact]]:
+    fallback_summary, fallback_impacts = _rule_based_change_impact(
+        before_node,
+        after_node,
+        changed_fields,
+        candidate_nodes,
+        source_version_id,
+        changed_at,
+    )
+    if os.getenv("CONTEXT_CANVAS_DISABLE_CHANGE_AI", "").lower() in {"1", "true", "yes"}:
+        return fallback_summary, fallback_impacts
+    if not os.getenv("OPENAI_API_KEY", "").strip():
+        return fallback_summary, fallback_impacts
+
+    try:
+        client = _openai_client()
+        response = client.responses.create(
+            model=_openai_model(),
+            instructions=CHANGE_IMPACT_INSTRUCTIONS,
+            input=_change_impact_payload(snapshot, before_node, after_node, changed_fields, candidate_nodes),
+            max_output_tokens=1400,
+        )
+        parsed = _parse_json_object(_response_text(response))
+    except Exception:
+        return fallback_summary, fallback_impacts
+
+    summary = str(parsed.get("summary") or fallback_summary).strip() or fallback_summary
+    candidate_by_id = {str(node.get("id")): node for node in candidate_nodes}
+    impacts: list[ChangeImpact] = []
+    for item in parsed.get("affectedNodes", []):
+        if not isinstance(item, dict):
+            continue
+        node_id = str(item.get("nodeId") or "")
+        node = candidate_by_id.get(node_id)
+        if not node:
+            continue
+        status = str(item.get("status") or "review")
+        if status not in {"review", "outdated", "needs_update", "conflict"}:
+            status = "review"
+        reason = str(item.get("reason") or "").strip() or "Review this connected node against the latest requirement change."
+        impacts.append(
+            ChangeImpact(
+                nodeId=node_id,
+                title=str(node.get("data", {}).get("title") or node_id),
+                status=status,  # type: ignore[arg-type]
+                reason=reason[:360],
+                sourceNodeId=str((after_node or before_node or {}).get("id") or ""),
+                sourceVersionId=source_version_id,
+                updatedAt=changed_at,
+            )
+        )
+    return summary[:220], impacts or fallback_impacts
 
 
 def _openai_client():
@@ -144,6 +234,25 @@ def _chat_payload(
             "savedCanvas": _saved_canvas_payload(snapshot),
             "recentChatHistory": _compact_history(history),
             "analysisContract": analysis.model_dump(),
+        },
+        ensure_ascii=False,
+    )
+
+
+def _change_impact_payload(
+    snapshot: CanvasSnapshot,
+    before_node: dict[str, Any] | None,
+    after_node: dict[str, Any] | None,
+    changed_fields: list[str],
+    candidate_nodes: list[dict[str, Any]],
+) -> str:
+    return json.dumps(
+        {
+            "changedFields": changed_fields,
+            "beforeNode": before_node,
+            "afterNode": after_node,
+            "candidateAffectedNodes": candidate_nodes,
+            "savedCanvas": _saved_canvas_payload(snapshot),
         },
         ensure_ascii=False,
     )
@@ -205,3 +314,75 @@ def _compact_history(history: list[dict[str, Any]]) -> list[dict[str, str]]:
         if content:
             compacted.append({"role": role, "content": content[:1200]})
     return compacted
+
+
+def _rule_based_change_impact(
+    before_node: dict[str, Any] | None,
+    after_node: dict[str, Any] | None,
+    changed_fields: list[str],
+    candidate_nodes: list[dict[str, Any]],
+    source_version_id: str,
+    changed_at: str,
+) -> tuple[str, list[ChangeImpact]]:
+    source = after_node or before_node or {}
+    source_data = source.get("data") if isinstance(source.get("data"), dict) else {}
+    source_type = str(source_data.get("canvasType") or "requirement")
+    source_title = str(source_data.get("title") or source.get("id") or "Requirement")
+    change_text = "updated"
+    if before_node is None:
+        change_text = "created"
+    elif after_node is None:
+        change_text = "deleted"
+    summary = f"{change_text.capitalize()} {source_title}; review related requirements for parity."
+    if changed_fields:
+        summary = f"{change_text.capitalize()} {source_title}: {', '.join(changed_fields)} changed."
+
+    statuses: dict[str, str] = {}
+    before_content = _node_content(before_node)
+    after_content = _node_content(after_node)
+    for node in candidate_nodes:
+        node_id = str(node.get("id") or "")
+        content = _node_content(node).lower()
+        status = "review"
+        reason = "Connected to the changed requirement or contract; verify it still aligns."
+        if after_node is None:
+            status = "outdated"
+            reason = "The source requirement was deleted; this connected node may reference retired scope."
+        elif source_type == "project_contract":
+            status = "needs_update"
+            reason = "The project contract changed; this requirement may need revision to preserve contract alignment."
+        if after_content and before_content and before_content.lower() in content and after_content.lower() not in content:
+            status = "outdated"
+            reason = "This node appears to reference the prior wording and may be stale."
+        if any(term in content for term in ("conflict", "contradict", "blocked by", "cannot")):
+            status = "conflict"
+            reason = "This node contains conflict language and should be reconciled with the latest change."
+        statuses[node_id] = status
+        node["__impact_reason"] = reason
+
+    impacts = [
+        ChangeImpact(
+            nodeId=str(node.get("id")),
+            title=str(node.get("data", {}).get("title") or node.get("id")),
+            status=statuses.get(str(node.get("id")), "review"),  # type: ignore[arg-type]
+            reason=str(node.get("__impact_reason") or "Review this node against the latest change."),
+            sourceNodeId=str(source.get("id") or ""),
+            sourceVersionId=source_version_id,
+            updatedAt=changed_at,
+        )
+        for node in candidate_nodes
+        if node.get("id")
+    ]
+    return summary[:220], impacts
+
+
+def _node_content(node: dict[str, Any] | None) -> str:
+    if not node:
+        return ""
+    data = node.get("data")
+    if not isinstance(data, dict):
+        return ""
+    fields = data.get("fields")
+    if not isinstance(fields, dict):
+        return ""
+    return str(fields.get("content") or "").strip()

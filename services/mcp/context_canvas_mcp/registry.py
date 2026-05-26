@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from fastmcp import FastMCP
@@ -237,13 +238,16 @@ def register_capabilities(app: FastMCP) -> None:
         )
 
     @app.resource("context-canvas://projects", tags=CORE_TAGS | {"canvas", "database"})
-    def canvas_projects_resource():
-        return CanvasStore.from_settings().list_projects(limit=50)
+    def canvas_projects_resource() -> str:
+        projects = CanvasStore.from_settings().list_projects(limit=50)
+        return json.dumps([project.model_dump() for project in projects], ensure_ascii=False)
 
     @app.resource("context-canvas://project/{project_id}/context", tags=CORE_TAGS | {"canvas", "database"})
-    def canvas_project_context_resource(project_id: str):
+    def canvas_project_context_resource(project_id: str) -> str:
         context = CanvasStore.from_settings().get_agent_context(project_id=project_id)
-        return context or {"status": "not_found", "message": f"Project not found: {project_id}"}
+        if not context:
+            return f"Project not found: {project_id}"
+        return context.markdown
 
     @app.resource("jira://config", tags=CORE_TAGS | {"jira", "configuration"})
     def jira_config():

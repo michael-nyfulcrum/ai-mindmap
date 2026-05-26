@@ -1,4 +1,4 @@
-import type { AnalysisResponse, CanvasSnapshot, ChatMessage, ChatThread } from "../canvas/canvasTypes";
+import type { AnalysisResponse, CanvasSnapshot, ChatMessage, ChatThread, ContractChangeVersion } from "../canvas/canvasTypes";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8787";
 
@@ -57,6 +57,15 @@ export async function analyzeCanvas(input: { projectId: string; question: string
   }
 
   return (await response.json()) as AnalysisResponse;
+}
+
+export async function listNodeVersions(input: { projectId: string; nodeId: string }) {
+  const response = await fetch(`${API_BASE_URL}/api/projects/${input.projectId}/nodes/${input.nodeId}/versions`);
+  if (!response.ok) {
+    throw new Error("Failed to load version history");
+  }
+
+  return (await response.json()) as { versions: ContractChangeVersion[] };
 }
 
 export async function listChats(projectId: string) {

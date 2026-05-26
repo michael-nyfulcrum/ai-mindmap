@@ -31,6 +31,20 @@ class CanvasNodeSummary(BaseModel):
     body: str = ""
     tags: list[str] = Field(default_factory=list)
     source_node_ids: list[str] = Field(default_factory=list)
+    impact_status: str | None = None
+    impact_reason: str | None = None
+    impact_source_node_id: str | None = None
+
+
+class CanvasChangeSummary(BaseModel):
+    id: str
+    node_id: str
+    node_title: str
+    version_number: int
+    change_type: str
+    summary: str
+    created_by: str
+    created_at: str
 
 
 class CanvasRelationshipSummary(BaseModel):
@@ -49,6 +63,8 @@ class CanvasAgentContext(BaseModel):
     summary: str
     requirements: list[CanvasNodeSummary]
     sources: list[CanvasNodeSummary]
+    flagged_nodes: list[CanvasNodeSummary] = Field(default_factory=list)
+    recent_changes: list[CanvasChangeSummary] = Field(default_factory=list)
     relationships: list[CanvasRelationshipSummary]
     markdown: str
 
@@ -149,6 +165,8 @@ class CanvasStore:
         edges = snapshot["edges"]
         requirements = [_node_summary(node) for node in nodes if _canvas_type(node) == "requirement"]
         sources = [_node_summary(node) for node in nodes if _canvas_type(node) in {"source_snapshot", "link", "project_contract"}]
+        flagged_nodes = [_node_summary(node) for node in nodes if _node_impact(node)]
+        recent_changes = self._recent_changes(project["id"])
         relationships = [
             CanvasRelationshipSummary(
                 id=str(edge.get("id") or ""),
@@ -171,8 +189,10 @@ class CanvasStore:
             summary=summary,
             requirements=requirements,
             sources=sources,
+            flagged_nodes=flagged_nodes,
+            recent_changes=recent_changes,
             relationships=relationships,
-            markdown=_context_markdown(project, requirements, sources, relationships, task),
+            markdown=_context_markdown(project, requirements, sources, flagged_nodes, recent_changes, relationships, task),
         )
 
     def upsert_requirement(
@@ -256,6 +276,7 @@ class CanvasStore:
             if not project:
                 raise ValueError(f"Project not found: {project_id}")
             now = _utc_now()
+            current_node: dict[str, Any] | None = None
             existing = connection.execute(
                 "SELECT id FROM canvas_nodes WHERE project_id = ? AND id = ?",
                 (project_id, node["id"]),
@@ -265,9 +286,20 @@ class CanvasStore:
                     "SELECT payload_json FROM canvas_nodes WHERE project_id = ? AND id = ?",
                     (project_id, node["id"]),
                 ).fetchone()
-                current_node = _loads(current_payload["payload_json"], {}) if current_payload else {}
+                loaded_node = _loads(current_payload["payload_json"], {}) if current_payload else {}
+                current_node = loaded_node if isinstance(loaded_node, dict) else {}
                 if isinstance(current_node, dict) and isinstance(current_node.get("position"), dict):
                     node["position"] = current_node["position"]
+            changed_fields = _changed_version_fields(current_node, node)
+            node = _with_audit_metadata(
+                node=node,
+                existing=current_node,
+                actor="context_canvas_mcp",
+                now=now,
+                touched=current_node is None or _node_changed(current_node, node),
+                clear_impact=bool(changed_fields),
+            )
+            if existing:
                 connection.execute(
                     "UPDATE canvas_nodes SET payload_json = ?, updated_at = ? WHERE project_id = ? AND id = ?",
                     (_json(node), now, project_id, node["id"]),
@@ -281,6 +313,17 @@ class CanvasStore:
                 status = "created"
             if _canvas_type(node) == "requirement":
                 self._sync_source_edges(connection, project_id, str(node["id"]), source_node_ids or [], now)
+            if changed_fields:
+                self._ensure_contract_change_table(connection)
+                self._insert_change_version(
+                    connection=connection,
+                    project_id=project_id,
+                    before=current_node,
+                    after=node,
+                    changed_fields=changed_fields,
+                    actor="context_canvas_mcp",
+                    now=now,
+                )
             connection.execute("UPDATE projects SET updated_at = ? WHERE id = ?", (now, project_id))
             connection.commit()
         return CanvasMutationResult(
@@ -298,6 +341,134 @@ class CanvasStore:
             row = connection.execute("SELECT id FROM projects ORDER BY updated_at DESC LIMIT 1").fetchone()
         return str(row["id"]) if row else None
 
+    def _recent_changes(self, project_id: str) -> list[CanvasChangeSummary]:
+        if not self.db_path.exists():
+            return []
+        with self._connect() as connection:
+            tables = {
+                str(row["name"])
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'contract_change_versions'"
+                ).fetchall()
+            }
+            if "contract_change_versions" not in tables:
+                return []
+            rows = connection.execute(
+                """
+                SELECT id, node_id, node_title, version_number, change_type, summary, created_by, created_at
+                FROM contract_change_versions
+                WHERE project_id = ?
+                ORDER BY created_at DESC
+                LIMIT 8
+                """,
+                (project_id,),
+            ).fetchall()
+        return [
+            CanvasChangeSummary(
+                id=row["id"],
+                node_id=row["node_id"],
+                node_title=row["node_title"],
+                version_number=int(row["version_number"]),
+                change_type=row["change_type"],
+                summary=row["summary"],
+                created_by=row["created_by"],
+                created_at=row["created_at"],
+            )
+            for row in rows
+        ]
+
+    @staticmethod
+    def _ensure_contract_change_table(connection: sqlite3.Connection) -> None:
+        connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS contract_change_versions (
+                id TEXT PRIMARY KEY,
+                project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                node_id TEXT NOT NULL,
+                node_title TEXT NOT NULL,
+                node_type TEXT NOT NULL,
+                version_number INTEGER NOT NULL,
+                change_type TEXT NOT NULL CHECK (change_type IN ('created', 'updated', 'deleted')),
+                summary TEXT NOT NULL,
+                changed_fields_json TEXT NOT NULL,
+                affected_nodes_json TEXT NOT NULL,
+                before_json TEXT,
+                after_json TEXT,
+                created_by TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_contract_versions_project_node
+            ON contract_change_versions (project_id, node_id, version_number DESC);
+
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+                id TEXT PRIMARY KEY,
+                applied_at TEXT NOT NULL
+            );
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO schema_migrations (id, applied_at)
+            VALUES (?, ?)
+            ON CONFLICT(id) DO NOTHING
+            """,
+            ("2026_05_26_contract_change_versions", _utc_now()),
+        )
+
+    def _insert_change_version(
+        self,
+        connection: sqlite3.Connection,
+        project_id: str,
+        before: dict[str, Any] | None,
+        after: dict[str, Any],
+        changed_fields: list[str],
+        actor: str,
+        now: str,
+    ) -> None:
+        node_id = str(after.get("id") or (before or {}).get("id") or "")
+        data = after.get("data") if isinstance(after.get("data"), dict) else {}
+        version_id = f"version_{uuid4().hex}"
+        version_number = self._next_version_number(connection, project_id, node_id)
+        change_type = "created" if before is None else "updated"
+        node_title = str(data.get("title") or node_id)
+        node_type = str(data.get("canvasType") or "requirement")
+        summary = f"{change_type.capitalize()} {node_title} through MCP: {', '.join(changed_fields)} changed."
+        connection.execute(
+            """
+            INSERT INTO contract_change_versions (
+                id, project_id, node_id, node_title, node_type, version_number,
+                change_type, summary, changed_fields_json, affected_nodes_json,
+                before_json, after_json, created_by, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                version_id,
+                project_id,
+                node_id,
+                node_title,
+                node_type,
+                version_number,
+                change_type,
+                summary,
+                _json(changed_fields),
+                _json([]),
+                _json(before) if before is not None else None,
+                _json(after),
+                actor,
+                now,
+            ),
+        )
+
+    @staticmethod
+    def _next_version_number(connection: sqlite3.Connection, project_id: str, node_id: str) -> int:
+        row = connection.execute(
+            "SELECT COALESCE(MAX(version_number), 0) AS version_number FROM contract_change_versions WHERE project_id = ? AND node_id = ?",
+            (project_id, node_id),
+        ).fetchone()
+        return int(row["version_number"]) + 1 if row else 1
+
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.db_path)
         connection.row_factory = sqlite3.Row
@@ -313,12 +484,12 @@ class CanvasStore:
         now: str,
     ) -> None:
         source_ids = [item.strip() for item in source_node_ids if item.strip()]
-        if not source_ids:
-            return
         connection.execute(
             "DELETE FROM canvas_edges WHERE project_id = ? AND target_node_id = ? AND id LIKE 'edge_mcp_%'",
             (project_id, target_id),
         )
+        if not source_ids:
+            return
         for source_id in source_ids:
             if source_id == target_id:
                 continue
@@ -354,6 +525,7 @@ class CanvasStore:
 def _node_summary(node: dict[str, Any]) -> CanvasNodeSummary:
     data = node.get("data") if isinstance(node.get("data"), dict) else {}
     fields = data.get("fields") if isinstance(data.get("fields"), dict) else {}
+    impact = _node_impact(node)
     body = str(fields.get("content") or "")
     return CanvasNodeSummary(
         id=str(node.get("id") or ""),
@@ -362,6 +534,9 @@ def _node_summary(node: dict[str, Any]) -> CanvasNodeSummary:
         body=body,
         tags=[str(tag) for tag in data.get("tags") or []],
         source_node_ids=[],
+        impact_status=str(impact.get("status")) if impact else None,
+        impact_reason=str(impact.get("reason")) if impact else None,
+        impact_source_node_id=str(impact.get("sourceNodeId")) if impact else None,
     )
 
 
@@ -369,6 +544,8 @@ def _context_markdown(
     project: dict[str, Any],
     requirements: list[CanvasNodeSummary],
     sources: list[CanvasNodeSummary],
+    flagged_nodes: list[CanvasNodeSummary],
+    recent_changes: list[CanvasChangeSummary],
     relationships: list[CanvasRelationshipSummary],
     task: str | None,
 ) -> str:
@@ -386,6 +563,10 @@ def _context_markdown(
     lines.extend(_node_lines(requirements) or ["- No requirement nodes saved."])
     lines.extend(["", "## Sources And Contract"])
     lines.extend(_node_lines(sources) or ["- No source or contract nodes saved."])
+    lines.extend(["", "## Active Impact Flags"])
+    lines.extend(_flag_lines(flagged_nodes) or ["- No active impact flags."])
+    lines.extend(["", "## Recent Contract Changes"])
+    lines.extend(_change_lines(recent_changes) or ["- No contract or requirement versions recorded."])
     lines.extend(["", "## Relationships"])
     lines.extend(
         [f"- `{item.source}` -> `{item.target}`: {item.relationship}" for item in relationships]
@@ -395,7 +576,102 @@ def _context_markdown(
 
 
 def _node_lines(nodes: list[CanvasNodeSummary]) -> list[str]:
-    return [f"- `{node.id}` {node.title}: {_clip(node.body, 360)}" for node in nodes]
+    return [f"- `{node.id}` {node.title}{_impact_suffix(node)}: {_clip(node.body, 360)}" for node in nodes]
+
+
+def _flag_lines(nodes: list[CanvasNodeSummary]) -> list[str]:
+    return [
+        f"- `{node.id}` {node.title}: {node.impact_status or 'review'} - {_clip(node.impact_reason or '', 220)}"
+        for node in nodes
+    ]
+
+
+def _change_lines(changes: list[CanvasChangeSummary]) -> list[str]:
+    return [
+        f"- `{change.node_id}` v{change.version_number} {change.change_type}: {_clip(change.summary, 260)}"
+        for change in changes
+    ]
+
+
+def _impact_suffix(node: CanvasNodeSummary) -> str:
+    if not node.impact_status:
+        return ""
+    return f" [{node.impact_status}]"
+
+
+def _node_impact(node: dict[str, Any]) -> dict[str, Any] | None:
+    data = node.get("data") if isinstance(node.get("data"), dict) else {}
+    impact = data.get("impact")
+    return impact if isinstance(impact, dict) else None
+
+
+def _changed_version_fields(before: dict[str, Any] | None, after: dict[str, Any]) -> list[str]:
+    if _canvas_type(after) not in {"project_contract", "requirement"}:
+        return []
+    if before is None:
+        return ["created"]
+    fields: list[str] = []
+    before_data = before.get("data") if isinstance(before.get("data"), dict) else {}
+    after_data = after.get("data") if isinstance(after.get("data"), dict) else {}
+    if before_data.get("title") != after_data.get("title"):
+        fields.append("title")
+    if before_data.get("tags") != after_data.get("tags"):
+        fields.append("tags")
+    if _node_content(before) != _node_content(after):
+        fields.append("content")
+    return fields
+
+
+def _node_changed(before: dict[str, Any] | None, after: dict[str, Any]) -> bool:
+    if before is None:
+        return True
+    before_data = before.get("data") if isinstance(before.get("data"), dict) else {}
+    after_data = after.get("data") if isinstance(after.get("data"), dict) else {}
+    return (
+        before_data.get("title") != after_data.get("title")
+        or before_data.get("tags") != after_data.get("tags")
+        or _node_content(before) != _node_content(after)
+    )
+
+
+def _with_audit_metadata(
+    node: dict[str, Any],
+    existing: dict[str, Any] | None,
+    actor: str,
+    now: str,
+    touched: bool,
+    clear_impact: bool,
+) -> dict[str, Any]:
+    data = node.get("data")
+    if not isinstance(data, dict):
+        return node
+    existing_data = existing.get("data") if existing and isinstance(existing.get("data"), dict) else {}
+    previous_audit = existing_data.get("audit") if isinstance(existing_data.get("audit"), dict) else {}
+    incoming_audit = data.get("audit") if isinstance(data.get("audit"), dict) else {}
+    next_data = {key: value for key, value in data.items() if not (clear_impact and key == "impact")}
+    next_data["audit"] = {
+        "createdAt": previous_audit.get("createdAt") or incoming_audit.get("createdAt") or now,
+        "createdBy": previous_audit.get("createdBy") or incoming_audit.get("createdBy") or actor,
+        "updatedAt": now if touched else previous_audit.get("updatedAt") or incoming_audit.get("updatedAt") or data.get("updatedAt") or now,
+        "updatedBy": actor if touched else previous_audit.get("updatedBy") or incoming_audit.get("updatedBy") or actor,
+    }
+    if not clear_impact:
+        preserved_impact = data.get("impact") or existing_data.get("impact")
+        if preserved_impact:
+            next_data["impact"] = preserved_impact
+    return {**node, "data": next_data}
+
+
+def _node_content(node: dict[str, Any] | None) -> str:
+    if not node:
+        return ""
+    data = node.get("data")
+    if not isinstance(data, dict):
+        return ""
+    fields = data.get("fields")
+    if not isinstance(fields, dict):
+        return ""
+    return str(fields.get("content") or "").strip()
 
 
 def _canvas_type(node: dict[str, Any]) -> str:
@@ -417,6 +693,8 @@ def _normalize_canvas_node(node: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(data, dict):
         return node
 
+    data = {key: value for key, value in data.items() if key != "highlighted"}
+    node = {**node, "data": data}
     fields = data.get("fields")
     if not isinstance(fields, dict):
         normalized = dict(node)

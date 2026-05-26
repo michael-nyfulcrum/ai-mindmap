@@ -12,8 +12,9 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Circle, PanelRightOpen, Plus, Sparkles } from "lucide-react";
+import { Circle, Code2, PanelRightOpen, Plus, Sparkles } from "lucide-react";
 import { CanvasAiPanel } from "./CanvasAiPanel";
+import { DeveloperHandoffPanel } from "./DeveloperHandoffPanel";
 import { CanvasInspector } from "./CanvasInspector";
 import { CanvasToolbar } from "./CanvasToolbar";
 import { GalaxyBackground } from "./GalaxyBackground";
@@ -51,6 +52,7 @@ export function CanvasPage() {
   const [isBooting, setIsBooting] = useState(true);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
   const [isInspectorCollapsed, setIsInspectorCollapsed] = useState(false);
+  const [isHandoffOpen, setIsHandoffOpen] = useState(false);
   const { fitView, screenToFlowPosition, getViewport, setCenter } = useReactFlow();
   const projectId = project.id;
   const snapshotRef = useRef({ project, nodes, edges });
@@ -144,12 +146,14 @@ export function CanvasPage() {
     try {
       const saved = await saveCanvas({ project: updatedProject, nodes: currentNodes, edges: currentEdges });
       setProject(saved.project);
+      setNodes(saved.nodes);
+      setEdges(saved.edges);
       setSaveState("saved");
     } catch {
       dirtyRef.current = true;
       setSaveState("error");
     }
-  }, []);
+  }, [setEdges, setNodes]);
 
   useEffect(() => {
     if (!projectId || !dirtyRef.current) {
@@ -296,12 +300,12 @@ export function CanvasPage() {
     setIsInspectorCollapsed(false);
   }, [activeEdgeIds, activeNodeIds, setEdges, setNodes]);
 
-  const runAnalysis = useCallback(async () => {
+  const sendCanvasMessage = useCallback(async (content: string) => {
     if (!project.id) {
       return;
     }
 
-    if (!question.trim()) {
+    if (!content.trim()) {
       return;
     }
 
@@ -315,20 +319,46 @@ export function CanvasPage() {
       setMessages([]);
     }
 
-    const content = question.trim();
-    setQuestion("");
+    const messageContent = content.trim();
     setIsSending(true);
     try {
-      const result = await sendChatMessage({ projectId: project.id, chatId, content });
+      const result = await sendChatMessage({ projectId: project.id, chatId, content: messageContent });
       setChats((current) => [result.thread, ...current.filter((chat) => chat.id !== result.thread.id)]);
       setMessages(result.messages);
     } catch {
-      setQuestion(content);
+      setQuestion(messageContent);
       setSaveState("error");
     } finally {
       setIsSending(false);
     }
-  }, [activeChatId, persist, project.id, question]);
+  }, [activeChatId, persist, project.id]);
+
+  const runAnalysis = useCallback(async () => {
+    const content = question.trim();
+    setQuestion("");
+    await sendCanvasMessage(content);
+  }, [question, sendCanvasMessage]);
+
+  const requestImpactPlan = useCallback(
+    (node: CanvasFlowNode) => {
+      const impact = node.data.impact;
+      if (!impact) {
+        return;
+      }
+      setIsChatCollapsed(false);
+      setQuestion("");
+      void sendCanvasMessage(
+        [
+          `Draft an update plan for the flagged node "${node.data.title}" (${node.id}).`,
+          `Impact status: ${impact.status}.`,
+          `Impact reason: ${impact.reason}`,
+          `Source node: ${impact.sourceNodeId}. Source version: ${impact.sourceVersionId}.`,
+          "Use only the saved canvas. Include why it was flagged, what needs review, suggested requirement edits, implementation implications, tests or verification, and open questions. Do not change canvas nodes automatically.",
+        ].join("\n"),
+      );
+    },
+    [sendCanvasMessage],
+  );
 
   const startNewChat = useCallback(async () => {
     if (!project.id) {
@@ -459,6 +489,9 @@ export function CanvasPage() {
         <div className="save-state">
           <Circle size={10} fill="currentColor" />
           <span>{saveState === "loading" ? "Loading" : saveState === "saving" ? "Saving" : saveState === "error" ? "Save error" : "Saved to DB"}</span>
+          <Button icon={<Code2 size={14} />} variant="ghost" onClick={() => setIsHandoffOpen(true)}>
+            Handoff
+          </Button>
           <Button icon={<Plus size={14} />} variant="ghost" onClick={() => void newProject()}>
             New
           </Button>
@@ -489,9 +522,11 @@ export function CanvasPage() {
 
       {selectedNode && !isInspectorCollapsed ? (
         <CanvasInspector
+          projectId={project.id}
           activeNode={selectedNode}
           allEdges={edges}
           onUpdateNode={updateNode}
+          onRequestImpactPlan={requestImpactPlan}
           onCollapse={() => setIsInspectorCollapsed(true)}
         />
       ) : null}
@@ -541,6 +576,15 @@ export function CanvasPage() {
         onDeleteItems={deleteActiveItems}
         activeItemCount={activeNodeIds.length + activeEdgeIds.length}
       />
+
+      {isHandoffOpen ? (
+        <DeveloperHandoffPanel
+          project={project}
+          nodes={nodes}
+          edges={edges}
+          onClose={() => setIsHandoffOpen(false)}
+        />
+      ) : null}
     </main>
   );
 }

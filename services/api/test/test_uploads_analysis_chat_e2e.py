@@ -63,6 +63,11 @@ class UploadAnalysisChatE2ETest(ApiE2ECase):
         self.assertEqual(saved.status_code, 200)
 
         before = self.client.get(f"/api/projects/{project_id}/canvas").json()
+        source_node = next(node for node in before["nodes"] if node["id"] == "node_source_client")
+        self.assertEqual(source_node["data"]["tags"], ["source"])
+        self.assertTrue(
+            any(edge["source"] == "node_source_client" and edge["target"] == "node_requirement_two" for edge in before["edges"])
+        )
         analysis = self.client.post(f"/api/projects/{project_id}/analyze", json={"question": " What is saved? "})
         self.assertEqual(analysis.status_code, 200)
         body = analysis.json()
@@ -136,9 +141,25 @@ class UploadAnalysisChatE2ETest(ApiE2ECase):
         self.assertNotEqual(second_message.json()["messages"][3]["content"], second_message.json()["analysis"]["summary"])
         self.assertEqual([item["role"] for item in second_message.json()["messages"]], ["user", "assistant", "user", "assistant"])
 
+        before_plan_canvas = self.client.get(f"/api/projects/{project_id}/canvas").json()
+        flag_plan = self.client.post(
+            f"/api/projects/{project_id}/chats/{chat_id}/messages",
+            json={
+                "content": (
+                    "Draft an update plan for flagged node node_requirement_two. "
+                    "Do not create, update, delete, or move canvas nodes."
+                )
+            },
+        )
+        self.assertEqual(flag_plan.status_code, 200)
+        self.assertOpenAIModel(flag_plan.json()["analysis"]["model"])
+        after_plan_canvas = self.client.get(f"/api/projects/{project_id}/canvas").json()
+        self.assertEqual(before_plan_canvas["nodes"], after_plan_canvas["nodes"])
+        self.assertEqual(before_plan_canvas["edges"], after_plan_canvas["edges"])
+
         reloaded = self.client.get(f"/api/projects/{project_id}/chats/{chat_id}")
         self.assertEqual(reloaded.status_code, 200)
-        self.assertEqual(len(reloaded.json()["messages"]), 4)
+        self.assertEqual(len(reloaded.json()["messages"]), 6)
 
         self.assertEqual(self.client.delete(f"/api/projects/{project_id}/chats/{chat_id}").status_code, 204)
         self.assertEqual(self.client.get(f"/api/projects/{project_id}/chats/{chat_id}").status_code, 404)
@@ -170,8 +191,15 @@ class UploadAnalysisChatE2ETest(ApiE2ECase):
         try:
             analysis_columns = {row[1] for row in connection.execute("PRAGMA table_info(analysis_runs)").fetchall()}
             node_columns = {row[1] for row in connection.execute("PRAGMA table_info(canvas_nodes)").fetchall()}
+            version_columns = {row[1] for row in connection.execute("PRAGMA table_info(contract_change_versions)").fetchall()}
+            migration_ids = {
+                row[0]
+                for row in connection.execute("SELECT id FROM schema_migrations").fetchall()
+            }
             self.assertIn("question", analysis_columns)
             self.assertIn("payload_json", node_columns)
+            self.assertIn("affected_nodes_json", version_columns)
+            self.assertIn("2026_05_26_contract_change_versions", migration_ids)
             migrated_question = connection.execute("SELECT question FROM analysis_runs WHERE id = ?", ("analysis_legacy",)).fetchone()[0]
             self.assertEqual(migrated_question, "Legacy?")
         finally:

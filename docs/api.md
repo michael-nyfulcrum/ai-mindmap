@@ -1,6 +1,6 @@
 # API Documentation
 
-Current state as of 2026-05-22: these routes are implemented by the FastAPI backend in `services/api/context_canvas_api`.
+Current state as of 2026-05-26: these routes are implemented by the FastAPI backend in `services/api/context_canvas_api`.
 
 Base URL in local development:
 
@@ -66,6 +66,7 @@ The canvas response contains:
 ```
 
 The web app autosaves by sending the whole current canvas to `PUT /canvas`.
+Semantic changes to `project_contract` and `requirement` nodes create version-history records. Layout-only changes do not.
 
 ## Nodes
 
@@ -100,6 +101,62 @@ and graph relationships. Do not add type-specific form fields such as priority,
 status, source URL, or summary.
 
 Deleting a node also deletes connected edges.
+
+Contract and requirement nodes may include backend-managed audit and impact metadata:
+
+```json
+{
+  "audit": {
+    "createdAt": "2026-05-26T00:00:00.000Z",
+    "createdBy": "local user",
+    "updatedAt": "2026-05-26T00:00:00.000Z",
+    "updatedBy": "local user"
+  },
+  "impact": {
+    "nodeId": "node_requirement_1",
+    "title": "Requirement",
+    "status": "needs_update",
+    "reason": "The project contract changed; this requirement may need revision.",
+    "sourceNodeId": "node_contract",
+    "sourceVersionId": "version_...",
+    "updatedAt": "2026-05-26T00:00:00.000Z"
+  }
+}
+```
+
+Clients can set the audit actor with the optional `x-context-canvas-actor` request header. If omitted, the API records `local user`.
+
+## Version History
+
+```http
+GET /api/projects/:projectId/versions
+GET /api/projects/:projectId/nodes/:nodeId/versions
+```
+
+Response:
+
+```json
+{
+  "versions": [
+    {
+      "id": "version_...",
+      "projectId": "project_...",
+      "nodeId": "node_contract",
+      "nodeTitle": "Client CR Contract",
+      "nodeType": "project_contract",
+      "versionNumber": 2,
+      "changeType": "updated",
+      "summary": "Updated Client CR Contract: content changed.",
+      "changedFields": ["content"],
+      "affectedNodes": [],
+      "createdBy": "local user",
+      "createdAt": "2026-05-26T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+Version entries are changelog-style audit records for requirement and contract semantic changes. `affectedNodes` contains AI-generated or offline-rule impact flags that the UI renders as review, outdated, needs-update, or conflict badges.
 
 ## Edges
 
@@ -276,6 +333,7 @@ http://127.0.0.1:8790/mcp
 ```
 
 The MCP server is supported for local coding-agent workflows over the saved SQLite canvas. It reads `services/api/context-canvas.sqlite` by default. Override with `CONTEXT_CANVAS_DB_PATH`.
+Set `VITE_MCP_URL` to change the MCP endpoint shown in the web app developer handoff panel.
 
 Canvas tools:
 
@@ -285,6 +343,8 @@ Canvas tools:
 - `upsert_requirement_node`
 - `upsert_source_snapshot_node`
 - `summarize_canvas_nodes`
+
+`get_canvas_context` includes active impact flags and recent contract-change versions. `upsert_requirement_node` writes audit metadata and version history through the shared SQLite database.
 
 Canvas resources:
 

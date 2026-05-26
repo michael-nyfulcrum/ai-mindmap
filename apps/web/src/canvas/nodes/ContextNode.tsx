@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { AlertCircle, CheckCircle2, FileText, Image, Link2, ScrollText } from "lucide-react";
-import type { CanvasFlowNode, CanvasNodeType } from "../canvasTypes";
+import type { CanvasFlowNode, CanvasNodeType, ImpactStatus } from "../canvasTypes";
 import { NODE_TYPE_LABELS } from "../canvasTypes";
 
 const nodeIcons: Record<CanvasNodeType, typeof FileText> = {
@@ -19,8 +19,20 @@ export const ContextNode = memo(function ContextNode({ data, selected }: NodePro
   const imageUrl = data.canvasType === "image" ? imageUrlFromContent(content) : "";
   const preview = previewText(content);
 
+  const impact = data.impact;
+
   return (
-    <article className={`context-node context-node-${data.canvasType} ${selected ? "is-active" : ""} ${data.highlighted ? "is-highlighted" : ""}`}>
+    <article
+      className={[
+        "context-node",
+        `context-node-${data.canvasType}`,
+        selected ? "is-active" : "",
+        data.highlighted ? "is-highlighted" : "",
+        impact ? `has-impact impact-${impact.status}` : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <Handle type="target" position={Position.Left} />
       <header className="context-node-header">
         <span className="context-node-icon">
@@ -31,6 +43,11 @@ export const ContextNode = memo(function ContextNode({ data, selected }: NodePro
           <h3>{data.title}</h3>
         </div>
       </header>
+      {impact ? (
+        <div className="context-node-impact">
+          <span>{impactLabel(impact.status)}</span>
+        </div>
+      ) : null}
       <div className="context-node-body">
         {imageUrl ? (
           <img className="context-node-image-preview" src={imageUrl} alt={data.title} />
@@ -56,6 +73,13 @@ function imageUrlFromContent(content: string) {
   }
   const firstUrl = content.match(/https?:\/\/\S+/);
   return firstUrl?.[0] ?? "";
+}
+
+function impactLabel(status: ImpactStatus) {
+  if (status === "needs_update") {
+    return "Needs update";
+  }
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 function previewText(content: string) {

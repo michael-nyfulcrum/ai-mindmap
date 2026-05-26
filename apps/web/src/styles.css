@@ -229,6 +229,79 @@ button:disabled {
   animation: ai-core-pulse-flat 1400ms ease-in-out infinite;
 }
 
+.handoff-backdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(8 17 32 / 46%);
+  backdrop-filter: blur(8px);
+}
+
+.handoff-panel {
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(720px, calc(100vh - 32px));
+  overflow: auto;
+  border: 1px solid #d4deea;
+  border-radius: 8px;
+  box-shadow: 0 26px 70px rgb(8 17 32 / 34%);
+}
+
+.handoff-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+}
+
+.handoff-stats {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.handoff-stats span,
+.handoff-section code {
+  overflow: hidden;
+  padding: 8px;
+  border: 1px solid #d9e2ed;
+  border-radius: 6px;
+  background: #f8fbff;
+  color: #26354a;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.handoff-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.handoff-section h3 {
+  margin: 0;
+  color: #23334a;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.handoff-section textarea {
+  width: 100%;
+  border: 1px solid #ccd5e1;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #17212f;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 10px;
+  resize: vertical;
+}
+
 .canvas-toolbar {
   grid-area: toolbar;
   display: flex;
@@ -555,6 +628,131 @@ button:disabled {
   background: rgb(255 255 255 / 70%);
 }
 
+.impact-panel {
+  padding: 10px;
+  border: 1px solid rgb(184 84 25 / 24%);
+  border-radius: 8px;
+  background: #fff8ed;
+}
+
+.impact-panel p,
+.version-history p {
+  margin: 0;
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.impact-panel small,
+.version-history small {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.audit-grid dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.audit-grid div {
+  padding: 8px;
+  border: 1px solid #d9e2ed;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 70%);
+}
+
+.audit-grid dt {
+  color: #65758a;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.audit-grid dd {
+  margin: 2px 0 0;
+  color: #26354a;
+  font-size: 12px;
+}
+
+.impact-badge,
+.context-node-impact span {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  min-height: 22px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 850;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.impact-badge-review,
+.impact-review .context-node-impact span {
+  border: 1px solid #b9c6d5;
+  background: #f4f7fb;
+  color: #475569;
+}
+
+.impact-badge-needs_update,
+.impact-needs_update .context-node-impact span {
+  border: 1px solid #e5b352;
+  background: #fff7df;
+  color: #875a09;
+}
+
+.impact-badge-outdated,
+.impact-outdated .context-node-impact span {
+  border: 1px solid #d49469;
+  background: #fff1e8;
+  color: #9a4b1f;
+}
+
+.impact-badge-conflict,
+.impact-conflict .context-node-impact span {
+  border: 1px solid #db7d87;
+  background: #fff0f2;
+  color: #a42937;
+}
+
+.version-history h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.version-history article {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px;
+  border: 1px solid #d9e2ed;
+  border-radius: 7px;
+  background: rgb(255 255 255 / 76%);
+}
+
+.version-history article div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.version-history strong {
+  color: #17212f;
+  font-size: 12px;
+}
+
+.version-history span {
+  color: #596a80;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 .context-node {
   width: 330px;
   min-height: 178px;
@@ -613,6 +811,20 @@ button:disabled {
     0 12px 28px rgb(26 39 58 / 11%);
 }
 
+.context-node.has-impact {
+  border-color: #c98a35;
+  box-shadow:
+    0 0 0 2px rgb(201 138 53 / 18%),
+    0 16px 32px rgb(26 39 58 / 14%);
+}
+
+.context-node.impact-conflict {
+  border-color: #c2313e;
+  box-shadow:
+    0 0 0 2px rgb(194 49 62 / 20%),
+    0 16px 32px rgb(26 39 58 / 14%);
+}
+
 .context-node-project_contract {
   border-top-color: #1f6feb;
 }
@@ -635,6 +847,10 @@ button:disabled {
   grid-template-columns: 30px 1fr;
   gap: 10px;
   padding: 13px 13px 8px;
+}
+
+.context-node-impact {
+  padding: 0 13px 8px;
 }
 
 .context-node-icon {

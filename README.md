@@ -2,13 +2,16 @@
 
 A basic MVP for a human-controlled project context canvas. Users can create and connect requirement/source nodes, save the graph to SQLite, and ask questions against the saved canvas.
 
-Current status: local MVP implemented and verified on 2026-05-22.
+Current status: local MVP implemented and verified on 2026-05-26.
 
 ## What Is Included
 
 - Vite React app with ReactFlow canvas.
 - FastAPI app backed by SQLite.
 - Project, canvas, node, edge, upload, and analysis persistence.
+- Contract/requirement version history with audit metadata and affected-node flags.
+- Developer handoff prompt for Claude Code, Codex, or other MCP-capable coding agents.
+- AI plan drafting for flagged nodes through the saved chat workflow.
 - AI analysis endpoint with citations.
 - OpenAI-backed AI analysis and chat. `OPENAI_API_KEY` is required.
 - FastMCP server for coding agents to read and update saved canvas context.
@@ -72,6 +75,7 @@ make reset-db
 - [API documentation](docs/api.md)
 - [MCP documentation](docs/mcp.md)
 - [Persistence and local operations](docs/persistence.md)
+- [Task working sources](docs/task-working-sources.md)
 
 ## Environment
 
@@ -83,11 +87,13 @@ CONTEXT_CANVAS_UPLOAD_DIR=
 CONTEXT_CANVAS_MAX_UPLOAD_BYTES=10485760
 CONTEXT_CANVAS_CORS_ORIGINS=http://127.0.0.1:5173,http://localhost:5173
 VITE_API_BASE_URL=http://127.0.0.1:8787
+VITE_MCP_URL=http://127.0.0.1:8790/mcp
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4.1-mini
+CONTEXT_CANVAS_DISABLE_CHANGE_AI=
 ATLASSIAN_URL=
 ATLASSIAN_EMAIL=
 ATLASSIAN_TOKEN=
 ```
 
-AI always uses OpenAI. There is no local AI fallback or runtime AI mode flag.
+Chat and analysis always use OpenAI. Contract change impact analysis uses OpenAI when available; tests can set `CONTEXT_CANVAS_DISABLE_CHANGE_AI=1` to use deterministic offline impact rules.

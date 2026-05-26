@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from context_canvas_api.analyzer import analyze_change_impact
 from context_canvas_api.demo import demo_snapshot, utc_now
-from context_canvas_api.models import AnalysisResponse, CanvasSnapshot, ChatMessage, ChatThread, Project
+from context_canvas_api.models import AnalysisResponse, CanvasSnapshot, ChatMessage, ChatThread, ContractChangeVersion, Project
 
 
 def database_path() -> Path:
@@ -100,13 +101,49 @@ class AppDatabase:
                 analysis_json TEXT,
                 created_at TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS contract_change_versions (
+                id TEXT PRIMARY KEY,
+                project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                node_id TEXT NOT NULL,
+                node_title TEXT NOT NULL,
+                node_type TEXT NOT NULL,
+                version_number INTEGER NOT NULL,
+                change_type TEXT NOT NULL CHECK (change_type IN ('created', 'updated', 'deleted')),
+                summary TEXT NOT NULL,
+                changed_fields_json TEXT NOT NULL,
+                affected_nodes_json TEXT NOT NULL,
+                before_json TEXT,
+                after_json TEXT,
+                created_by TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_contract_versions_project_node
+            ON contract_change_versions (project_id, node_id, version_number DESC);
+
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+                id TEXT PRIMARY KEY,
+                applied_at TEXT NOT NULL
+            );
             """
         )
         self._migrate_legacy_canvas_nodes()
         self._migrate_legacy_canvas_edges()
         self._migrate_legacy_uploads()
         self._migrate_legacy_analysis_runs()
+        self._record_schema_migration("2026_05_26_contract_change_versions")
         self.connection.commit()
+
+    def _record_schema_migration(self, migration_id: str) -> None:
+        self.connection.execute(
+            """
+            INSERT INTO schema_migrations (id, applied_at)
+            VALUES (?, ?)
+            ON CONFLICT(id) DO NOTHING
+            """,
+            (migration_id, utc_now()),
+        )
 
     def _migrate_legacy_canvas_nodes(self) -> None:
         columns = self._table_columns("canvas_nodes")
@@ -362,13 +399,26 @@ class AppDatabase:
         ]
         return CanvasSnapshot(project=project, nodes=nodes, edges=edges)
 
-    def save_snapshot(self, snapshot: CanvasSnapshot) -> CanvasSnapshot:
+    def save_snapshot(self, snapshot: CanvasSnapshot, actor: str = "local user") -> CanvasSnapshot:
         existing = self.get_snapshot(snapshot.project.id)
         if existing and _same_saved_canvas(existing, snapshot):
             return existing
 
         now = utc_now()
         project = snapshot.project.model_copy(update={"updatedAt": now})
+        existing_nodes = {node["id"]: node for node in existing.nodes} if existing else {}
+        incoming_nodes = [
+            _with_audit_metadata(
+                _normalize_canvas_node(node),
+                existing_nodes.get(str(node.get("id"))),
+                actor,
+                now,
+                semantic_changed=_semantic_changed(existing_nodes.get(str(node.get("id"))), _normalize_canvas_node(node)),
+            )
+            for node in snapshot.nodes
+        ]
+        versions = self._build_change_versions(project.id, project, existing_nodes, incoming_nodes, snapshot.edges, actor, now)
+        _apply_change_impacts(incoming_nodes, versions)
         with self.connection:
             self.connection.execute(
                 """
@@ -391,38 +441,82 @@ class AppDatabase:
             )
             self.connection.execute("DELETE FROM canvas_nodes WHERE project_id = ?", (project.id,))
             self.connection.execute("DELETE FROM canvas_edges WHERE project_id = ?", (project.id,))
-            for node in snapshot.nodes:
+            for node in incoming_nodes:
                 self._insert_node(project.id, node, now)
             for edge in snapshot.edges:
                 self._insert_edge(project.id, edge, now)
+            for version in versions:
+                self._insert_change_version(version)
         return self.get_snapshot(project.id) or CanvasSnapshot(project=project, nodes=[], edges=[])
 
-    def create_node(self, project_id: str, node: dict[str, Any]) -> dict[str, Any] | None:
-        if not self.get_project(project_id):
+    def create_node(self, project_id: str, node: dict[str, Any], actor: str = "local user") -> dict[str, Any] | None:
+        project = self.get_project(project_id)
+        if not project:
             return None
         now = utc_now()
-        node = _normalize_canvas_node({**node, "id": node.get("id") or f"node_{uuid4().hex}"})
+        node = _with_audit_metadata(_normalize_canvas_node({**node, "id": node.get("id") or f"node_{uuid4().hex}"}), None, actor, now, True)
+        versions = self._build_change_versions(project_id, project, {}, [node], [], actor, now)
+        _apply_change_impacts([node], versions)
         self._insert_node(project_id, node, now)
+        for version in versions:
+            self._insert_change_version(version)
         self._touch_project(project_id, now)
         self.connection.commit()
         return node
 
-    def patch_node(self, project_id: str, node_id: str, patch: dict[str, Any]) -> dict[str, Any] | None:
+    def patch_node(self, project_id: str, node_id: str, patch: dict[str, Any], actor: str = "local user") -> dict[str, Any] | None:
         current = self._get_node(project_id, node_id)
         if not current:
+            return None
+        project = self.get_project(project_id)
+        if not project:
             return None
         updated = _normalize_canvas_node(_deep_merge(current, patch))
         updated["id"] = node_id
         now = utc_now()
+        updated = _with_audit_metadata(updated, current, actor, now, _semantic_changed(current, updated))
+        snapshot = self.get_snapshot(project_id)
+        edges = snapshot.edges if snapshot else []
+        existing_nodes = {node_id: current}
+        if snapshot:
+            existing_nodes.update({node["id"]: node for node in snapshot.nodes})
+        incoming_nodes = [updated] + [node for node in (snapshot.nodes if snapshot else []) if node["id"] != node_id]
+        versions = self._build_change_versions(project_id, project, existing_nodes, incoming_nodes, edges, actor, now)
+        _apply_change_impacts(incoming_nodes, versions)
+        updated = next(node for node in incoming_nodes if node["id"] == node_id)
         self.connection.execute(
             "UPDATE canvas_nodes SET payload_json = ?, updated_at = ? WHERE project_id = ? AND id = ?",
             (_json(updated), now, project_id, node_id),
         )
+        for node in incoming_nodes:
+            if node["id"] != node_id and node.get("data", {}).get("impact"):
+                self.connection.execute(
+                    "UPDATE canvas_nodes SET payload_json = ?, updated_at = ? WHERE project_id = ? AND id = ?",
+                    (_json(node), now, project_id, node["id"]),
+                )
+        for version in versions:
+            self._insert_change_version(version)
         self._touch_project(project_id, now)
         self.connection.commit()
         return updated
 
-    def delete_node(self, project_id: str, node_id: str) -> bool:
+    def delete_node(self, project_id: str, node_id: str, actor: str = "local user") -> bool:
+        project = self.get_project(project_id)
+        current = self._get_node(project_id, node_id)
+        snapshot = self.get_snapshot(project_id) if project else None
+        versions: list[dict[str, Any]] = []
+        incoming_nodes = [node for node in (snapshot.nodes if snapshot else []) if node["id"] != node_id]
+        if project and current:
+            versions = self._build_change_versions(
+                project_id,
+                project,
+                {node["id"]: node for node in (snapshot.nodes if snapshot else [current])},
+                incoming_nodes,
+                snapshot.edges if snapshot else [],
+                actor,
+                utc_now(),
+            )
+            _apply_change_impacts(incoming_nodes, versions)
         with self.connection:
             self.connection.execute(
                 "DELETE FROM canvas_edges WHERE project_id = ? AND (source_node_id = ? OR target_node_id = ?)",
@@ -433,7 +527,16 @@ class AppDatabase:
                 (project_id, node_id),
             )
             if cursor.rowcount:
-                self._touch_project(project_id, utc_now())
+                now = utc_now()
+                for node in incoming_nodes:
+                    if node.get("data", {}).get("impact"):
+                        self.connection.execute(
+                            "UPDATE canvas_nodes SET payload_json = ?, updated_at = ? WHERE project_id = ? AND id = ?",
+                            (_json(node), now, project_id, node["id"]),
+                        )
+                for version in versions:
+                    self._insert_change_version(version)
+                self._touch_project(project_id, now)
         return cursor.rowcount > 0
 
     def create_edge(self, project_id: str, edge: dict[str, Any]) -> dict[str, Any] | None:
@@ -612,6 +715,122 @@ class AppDatabase:
         )
         self.connection.commit()
 
+    def list_change_versions(self, project_id: str, node_id: str | None = None) -> list[ContractChangeVersion]:
+        if node_id:
+            rows = self.connection.execute(
+                """
+                SELECT * FROM contract_change_versions
+                WHERE project_id = ? AND node_id = ?
+                ORDER BY version_number DESC, created_at DESC
+                """,
+                (project_id, node_id),
+            ).fetchall()
+        else:
+            rows = self.connection.execute(
+                """
+                SELECT * FROM contract_change_versions
+                WHERE project_id = ?
+                ORDER BY created_at DESC
+                LIMIT 80
+                """,
+                (project_id,),
+            ).fetchall()
+        return [self._change_version(row) for row in rows]
+
+    def _build_change_versions(
+        self,
+        project_id: str,
+        project: Project,
+        existing_nodes: dict[str, dict[str, Any]],
+        incoming_nodes: list[dict[str, Any]],
+        edges: list[dict[str, Any]],
+        actor: str,
+        now: str,
+    ) -> list[dict[str, Any]]:
+        incoming_by_id = {node["id"]: node for node in incoming_nodes}
+        semantic_node_ids = {
+            node_id
+            for node_id, node in {**existing_nodes, **incoming_by_id}.items()
+            if _is_versioned_node(node)
+        }
+        versions: list[dict[str, Any]] = []
+        snapshot = CanvasSnapshot(project=project, nodes=incoming_nodes, edges=edges)
+        for node_id in sorted(semantic_node_ids):
+            before = existing_nodes.get(node_id)
+            after = incoming_by_id.get(node_id)
+            changed_fields = _changed_fields(before, after)
+            if not changed_fields:
+                continue
+            change_type = "created" if before is None else "deleted" if after is None else "updated"
+            source = after or before
+            if not source:
+                continue
+            version_id = f"version_{uuid4().hex}"
+            candidate_nodes = _candidate_affected_nodes(node_id, incoming_nodes, edges)
+            summary, affected_nodes = analyze_change_impact(
+                snapshot,
+                before,
+                after,
+                changed_fields,
+                candidate_nodes,
+                version_id,
+                now,
+            )
+            versions.append(
+                {
+                    "id": version_id,
+                    "projectId": project_id,
+                    "nodeId": node_id,
+                    "nodeTitle": str(source.get("data", {}).get("title") or node_id),
+                    "nodeType": str(source.get("data", {}).get("canvasType") or "requirement"),
+                    "versionNumber": self._next_version_number(project_id, node_id) + _pending_version_offset(versions, node_id),
+                    "changeType": change_type,
+                    "summary": summary,
+                    "changedFields": changed_fields,
+                    "affectedNodes": [impact.model_dump() for impact in affected_nodes],
+                    "before": before,
+                    "after": after,
+                    "createdBy": actor,
+                    "createdAt": now,
+                }
+            )
+        return versions
+
+    def _next_version_number(self, project_id: str, node_id: str) -> int:
+        row = self.connection.execute(
+            "SELECT COALESCE(MAX(version_number), 0) AS version_number FROM contract_change_versions WHERE project_id = ? AND node_id = ?",
+            (project_id, node_id),
+        ).fetchone()
+        return int(row["version_number"]) + 1 if row else 1
+
+    def _insert_change_version(self, version: dict[str, Any]) -> None:
+        self.connection.execute(
+            """
+            INSERT INTO contract_change_versions (
+                id, project_id, node_id, node_title, node_type, version_number,
+                change_type, summary, changed_fields_json, affected_nodes_json,
+                before_json, after_json, created_by, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                version["id"],
+                version["projectId"],
+                version["nodeId"],
+                version["nodeTitle"],
+                version["nodeType"],
+                version["versionNumber"],
+                version["changeType"],
+                version["summary"],
+                _json(version["changedFields"]),
+                _json(version["affectedNodes"]),
+                _json(version["before"]) if version["before"] is not None else None,
+                _json(version["after"]) if version["after"] is not None else None,
+                version["createdBy"],
+                version["createdAt"],
+            ),
+        )
+
     def _insert_node(self, project_id: str, node: dict[str, Any], now: str) -> None:
         node = _normalize_canvas_node(node)
         self.connection.execute(
@@ -677,6 +896,22 @@ class AppDatabase:
             createdAt=row["created_at"],
         )
 
+    def _change_version(self, row: sqlite3.Row) -> ContractChangeVersion:
+        return ContractChangeVersion(
+            id=row["id"],
+            projectId=row["project_id"],
+            nodeId=row["node_id"],
+            nodeTitle=row["node_title"],
+            nodeType=row["node_type"],
+            versionNumber=row["version_number"],
+            changeType=row["change_type"],
+            summary=row["summary"],
+            changedFields=_loads(row["changed_fields_json"], []),
+            affectedNodes=_loads(row["affected_nodes_json"], []),
+            createdBy=row["created_by"],
+            createdAt=row["created_at"],
+        )
+
 
 def _json(value: Any) -> str:
     return json.dumps(value, separators=(",", ":"), ensure_ascii=False)
@@ -696,11 +931,118 @@ def _same_saved_canvas(existing: CanvasSnapshot, incoming: CanvasSnapshot) -> bo
     )
 
 
+def _pending_version_offset(versions: list[dict[str, Any]], node_id: str) -> int:
+    return sum(1 for version in versions if version["nodeId"] == node_id)
+
+
+def _is_versioned_node(node: dict[str, Any] | None) -> bool:
+    if not node:
+        return False
+    data = node.get("data")
+    if not isinstance(data, dict):
+        return False
+    return data.get("canvasType") in {"project_contract", "requirement"}
+
+
+def _changed_fields(before: dict[str, Any] | None, after: dict[str, Any] | None) -> list[str]:
+    if not _is_versioned_node(before) and not _is_versioned_node(after):
+        return []
+    if before is None:
+        return ["created"]
+    if after is None:
+        return ["deleted"]
+    fields: list[str] = []
+    before_data = before.get("data") if isinstance(before.get("data"), dict) else {}
+    after_data = after.get("data") if isinstance(after.get("data"), dict) else {}
+    if before_data.get("title") != after_data.get("title"):
+        fields.append("title")
+    if before_data.get("tags") != after_data.get("tags"):
+        fields.append("tags")
+    if _node_content(before) != _node_content(after):
+        fields.append("content")
+    return fields
+
+
+def _semantic_changed(before: dict[str, Any] | None, after: dict[str, Any] | None) -> bool:
+    return bool(_changed_fields(before, after))
+
+
+def _with_audit_metadata(
+    node: dict[str, Any],
+    existing: dict[str, Any] | None,
+    actor: str,
+    now: str,
+    semantic_changed: bool,
+) -> dict[str, Any]:
+    data = node.get("data")
+    if not isinstance(data, dict):
+        return node
+    existing_data = existing.get("data") if existing and isinstance(existing.get("data"), dict) else {}
+    previous_audit = existing_data.get("audit") if isinstance(existing_data.get("audit"), dict) else {}
+    incoming_audit = data.get("audit") if isinstance(data.get("audit"), dict) else {}
+    audit = {
+        "createdAt": previous_audit.get("createdAt") or incoming_audit.get("createdAt") or now,
+        "createdBy": previous_audit.get("createdBy") or incoming_audit.get("createdBy") or actor,
+        "updatedAt": now if semantic_changed else previous_audit.get("updatedAt") or incoming_audit.get("updatedAt") or data.get("updatedAt") or now,
+        "updatedBy": actor if semantic_changed else previous_audit.get("updatedBy") or incoming_audit.get("updatedBy") or actor,
+    }
+    preserved_impact = None if semantic_changed else data.get("impact") or existing_data.get("impact")
+    next_data = {key: value for key, value in data.items() if not (semantic_changed and key == "impact")}
+    next_data["audit"] = audit
+    if preserved_impact:
+        next_data["impact"] = preserved_impact
+    return {**node, "data": next_data}
+
+
+def _candidate_affected_nodes(node_id: str, nodes: list[dict[str, Any]], edges: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    related_ids: set[str] = set()
+    for edge in edges:
+        source = str(edge.get("source") or "")
+        target = str(edge.get("target") or "")
+        if source == node_id and target:
+            related_ids.add(target)
+        elif target == node_id and source:
+            related_ids.add(source)
+    node_by_id = {str(node.get("id")): node for node in nodes}
+    source = node_by_id.get(node_id)
+    source_data = source.get("data") if source and isinstance(source.get("data"), dict) else {}
+    if source_data.get("canvasType") == "project_contract":
+        for node in nodes:
+            data = node.get("data") if isinstance(node.get("data"), dict) else {}
+            if data.get("canvasType") == "requirement":
+                related_ids.add(str(node.get("id")))
+    related_ids.discard(node_id)
+    return [node_by_id[node_id] for node_id in sorted(related_ids) if node_id in node_by_id]
+
+
+def _apply_change_impacts(nodes: list[dict[str, Any]], versions: list[dict[str, Any]]) -> None:
+    impact_by_node: dict[str, dict[str, Any]] = {}
+    rank = {"review": 0, "needs_update": 1, "outdated": 2, "conflict": 3}
+    for version in versions:
+        for impact in version["affectedNodes"]:
+            node_id = str(impact.get("nodeId") or "")
+            if not node_id:
+                continue
+            current = impact_by_node.get(node_id)
+            if not current or rank.get(str(impact.get("status")), 0) >= rank.get(str(current.get("status")), 0):
+                impact_by_node[node_id] = impact
+    for node in nodes:
+        node_id = str(node.get("id") or "")
+        impact = impact_by_node.get(node_id)
+        if not impact:
+            continue
+        data = node.get("data")
+        if isinstance(data, dict):
+            node["data"] = {**data, "impact": impact}
+
+
 def _normalize_canvas_node(node: dict[str, Any]) -> dict[str, Any]:
     data = node.get("data")
     if not isinstance(data, dict):
         return node
 
+    data = {key: value for key, value in data.items() if key != "highlighted"}
+    node = {**node, "data": data}
     fields = data.get("fields")
     if not isinstance(fields, dict):
         normalized = dict(node)
@@ -712,6 +1054,18 @@ def _normalize_canvas_node(node: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(node)
     normalized["data"] = {**data, "fields": {"content": _content_from_legacy_fields(fields)}}
     return normalized
+
+
+def _node_content(node: dict[str, Any] | None) -> str:
+    if not node:
+        return ""
+    data = node.get("data")
+    if not isinstance(data, dict):
+        return ""
+    fields = data.get("fields")
+    if not isinstance(fields, dict):
+        return ""
+    return str(fields.get("content") or "").strip()
 
 
 def _content_from_legacy_fields(fields: dict[str, Any]) -> str:

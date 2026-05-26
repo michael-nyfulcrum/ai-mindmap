@@ -29,21 +29,29 @@ Tables:
 - `analysis_runs`
 - `chat_threads`
 - `chat_messages`
+- `contract_change_versions`
+- `schema_migrations`
 
 Canvas saves are transactional. A save updates the project row, replaces the project's node rows, and replaces the project's edge rows in one transaction.
 
 Identical whole-canvas saves are idempotent. If the submitted project metadata, viewport, nodes, and edges match the stored canvas, the API returns the existing snapshot without rewriting SQLite just to advance `updatedAt`.
 
+Semantic changes to `project_contract` and `requirement` nodes write changelog-style rows to `contract_change_versions`. Layout-only changes do not create versions. Requirement write-back through MCP also records audit metadata and version history with `context_canvas_mcp` as the actor.
+
 ## Schema Migration
 
-The API runs table-shape migrations on startup. It currently migrates these older local MVP table shapes:
+The API runs table-shape migrations on startup and records applied schema milestones in `schema_migrations`. It currently migrates these older local MVP table shapes:
 
 - `canvas_nodes` rows that stored `type`, `title`, `position_json`, and `data_json`.
 - `canvas_edges` rows that stored `relationship`, `label`, and `edge_json`.
 - `uploads` rows that stored `url` instead of `file_path`.
 - `analysis_runs` rows that stored `request_json` instead of `question`.
 
-This is enough for existing local SQLite databases created by the earlier MVP backend. Future schema work should add an explicit schema version table before adding more migrations.
+This is enough for existing local SQLite databases created by the earlier MVP backend. Future schema work should add new rows to `schema_migrations` for material schema changes.
+
+Current recorded schema milestone:
+
+- `2026_05_26_contract_change_versions`
 
 ## Upload Files
 

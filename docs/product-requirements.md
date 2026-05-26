@@ -1,6 +1,6 @@
 # Context Canvas MVP Requirements
 
-Current repo state as of 2026-05-22.
+Current repo state as of 2026-05-26.
 
 ## Product Goal
 
@@ -21,7 +21,7 @@ The MVP is intentionally minimal. It is not a task tracker, issue tracker, or op
 | Source fetch API | Deferred from core gate | Experimental endpoints remain in the repo, but Jira, Confluence, Slack, and external tooling are later improvements. |
 | MCP canvas service | Implemented | FastMCP tools expose saved canvas context to coding agents and can write requirement/source nodes back to SQLite. |
 | MCP external source tools | Deferred from core gate | Jira, Confluence, Figma, GitHub, and generic source helpers remain experimental. |
-| Backend e2e | Implemented | 9 no-mock tests cover projects, canvas persistence, restart persistence, node/edge CRUD, uploads, DB-backed analysis, chat, MCP canvas context, and legacy DB migration. |
+| Backend e2e | Implemented | 11 no-mock e2e tests cover projects, seeded demo loading, canvas persistence, restart persistence, node/edge CRUD, uploads, DB-backed analysis, chat, MCP canvas context/tools/resources/prompts, version history, and legacy DB migration. |
 | Frontend runtime QA | Manual | Current frontend automation is TypeScript build and lint; interaction QA is manual. |
 | Auth and permissions | Not implemented | Local MVP only. |
 | Slack integration | Not implemented | Later improvement. |
@@ -153,6 +153,7 @@ Implemented API groups:
 - `/api/projects/:projectId/canvas`
 - `/api/projects/:projectId/nodes`
 - `/api/projects/:projectId/edges`
+- `/api/projects/:projectId/versions`
 - `/api/uploads`
 - `/api/projects/:projectId/analyze`
 - `/api/projects/:projectId/chats`
@@ -171,6 +172,8 @@ Supported MCP canvas tools:
 - `upsert_requirement_node`
 - `upsert_source_snapshot_node`
 - `summarize_canvas_nodes`
+
+`get_canvas_context` includes active impact flags and recent contract changes. Requirement write-back through MCP records audit metadata and contract-change version history.
 
 Supported MCP canvas resources:
 
@@ -219,25 +222,32 @@ Experimental MCP resources:
 | User can create a new chat and reload prior chat messages. | Pass |
 | User can store and cite source snapshots manually in the saved canvas. | Pass |
 | Coding agents can read and update saved canvas context through MCP. | Pass |
+| Developer handoff gives Claude Code/Codex-ready project and MCP context. | Pass |
+| Contract and requirement changes create audit/version history. | Pass |
+| Contract changes visibly flag affected nodes. | Pass |
+| Flagged nodes can ask AI for an update plan without automatic mutation. | Pass |
 | Existing older local SQLite DBs migrate on startup. | Pass |
 | The seeded `GGR-5534` example loads from the database. | Pass |
 | Backend e2e tests pass without unit tests or mocks. | Pass |
 
 ## Verification
 
-Latest verification run on 2026-05-22:
+Latest verification run on 2026-05-26:
 
-- `pnpm test:e2e`: passed, 9 backend e2e tests.
+- `pnpm --filter=@context-canvas/web lint`: passed.
+- `pnpm --filter=@context-canvas/web build`: passed.
+- `PYTHONPATH=services/api:services/mcp CONTEXT_CANVAS_DISABLE_CHANGE_AI=1 uv run --project . python -m unittest discover -s services/api/test -t . -v`: passed, 11 backend e2e tests.
+- `UV_CACHE_DIR=.uv-cache PYTHONPATH=services/api:services/mcp uv run --project . python -m compileall services/api/context_canvas_api services/mcp/context_canvas_mcp services/api/test`: passed.
+- `git diff --check`: passed.
 - `pnpm build`: passed.
 - `pnpm lint`: passed.
 
-Backend e2e covers project creation, canvas save/reload, API restart persistence, node/edge CRUD, upload validation and serving, AI analysis over the saved SQLite canvas, chat message persistence over the current saved canvas, MCP canvas context read/write, and legacy SQLite migration.
+Backend e2e covers project creation, seeded demo loading, canvas save/reload, UI-only highlight stripping, API restart persistence, node/edge CRUD, upload validation and serving, manual source snapshot storage and citation edges, AI analysis over the saved SQLite canvas, chat message persistence over the current saved canvas, AI plan chat without graph mutation, contract/requirement version history, affected-node flags, MCP canvas tools/resources/prompts read/write, and legacy SQLite migration with schema migration tracking.
 
 ## Next Progress Items
 
 | Priority | Item | Notes |
 | --- | --- | --- |
-| Medium | Improve migration versioning | Current migrations are shape-based; add explicit schema version tracking before more tables are added. |
 | Medium | Add project switching UI | API supports multiple projects; UI currently starts from first project and can create new projects. |
 | Medium | Add MCP auth controls | Required before exposing MCP beyond local development. |
 | Medium | Add UI source capture/import flow | Require user confirmation before adding any external context. |

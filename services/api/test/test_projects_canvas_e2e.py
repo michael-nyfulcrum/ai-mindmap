@@ -8,6 +8,17 @@ from test.helpers import ApiE2ECase, make_edge, make_node
 
 
 class ProjectAndCanvasE2ETest(ApiE2ECase):
+    def test_seeded_demo_canvas_loads_contract_sources_and_requirements(self) -> None:
+        canvas = self.client.get("/api/projects/project_demo_context_canvas/canvas")
+        self.assertEqual(canvas.status_code, 200)
+        body = canvas.json()
+        self.assertEqual(body["project"]["name"], "GGR-5534 Help Center Change Request")
+        node_types = {node["data"]["canvasType"] for node in body["nodes"]}
+        self.assertIn("project_contract", node_types)
+        self.assertIn("requirement", node_types)
+        self.assertIn("source_snapshot", node_types)
+        self.assertGreaterEqual(len(body["edges"]), 4)
+
     def test_project_crud_and_delete_cascade(self) -> None:
         created = self.client.post("/api/projects", json={"name": " Client CR ", "description": "Initial"})
         self.assertEqual(created.status_code, 200)
@@ -38,6 +49,7 @@ class ProjectAndCanvasE2ETest(ApiE2ECase):
             make_node("node_contract", "Contract", "project_contract"),
             make_node("node_requirement", "Requirement"),
         ]
+        snapshot["nodes"][1]["data"]["highlighted"] = True
         snapshot["edges"] = [make_edge("edge_contract_requirement", "node_contract", "node_requirement", "requirement source")]
 
         saved = self.client.put(f"/api/projects/{project_id}/canvas", json=snapshot)
@@ -52,6 +64,7 @@ class ProjectAndCanvasE2ETest(ApiE2ECase):
         reloaded = self.client.get(f"/api/projects/{project_id}/canvas")
         self.assertEqual(reloaded.status_code, 200)
         self.assertEqual(reloaded.json()["edges"][0]["label"], "requirement source")
+        self.assertNotIn("highlighted", reloaded.json()["nodes"][1]["data"])
 
         mismatched = dict(snapshot)
         mismatched["project"] = {**snapshot["project"], "id": "project_wrong"}

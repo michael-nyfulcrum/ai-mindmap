@@ -17,6 +17,8 @@ export type CanvasNodeData = {
   tags: string[];
   updatedAt: string;
   highlighted?: boolean;
+  audit?: AuditMetadata;
+  impact?: ChangeImpact;
 };
 
 export type CanvasEdgeData = {
@@ -56,6 +58,40 @@ export type AnalysisResponse = {
   missingContext: string[];
   suggestedNextSteps: string[];
   citations: Array<{ nodeId: string; title: string }>;
+};
+
+export type ImpactStatus = "review" | "outdated" | "needs_update" | "conflict";
+
+export type AuditMetadata = {
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string;
+  updatedBy: string;
+};
+
+export type ChangeImpact = {
+  nodeId: string;
+  title: string;
+  status: ImpactStatus;
+  reason: string;
+  sourceNodeId: string;
+  sourceVersionId: string;
+  updatedAt: string;
+};
+
+export type ContractChangeVersion = {
+  id: string;
+  projectId: string;
+  nodeId: string;
+  nodeTitle: string;
+  nodeType: CanvasNodeType;
+  versionNumber: number;
+  changeType: "created" | "updated" | "deleted";
+  summary: string;
+  changedFields: string[];
+  affectedNodes: ChangeImpact[];
+  createdBy: string;
+  createdAt: string;
 };
 
 export type ChatThread = {

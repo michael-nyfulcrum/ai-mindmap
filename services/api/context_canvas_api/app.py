@@ -146,29 +146,41 @@ def create_app(
         return snapshot.model_dump()
 
     @app.put("/api/projects/{project_id}/canvas")
-    def put_canvas(project_id: str, payload: CanvasSnapshot, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
+    def put_canvas(project_id: str, payload: CanvasSnapshot, request: Request, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
         if payload.project.id != project_id:
             raise HTTPException(status_code=400, detail="Canvas project ID does not match URL")
-        return db.save_snapshot(payload).model_dump()
+        return db.save_snapshot(payload, actor=_actor(request)).model_dump()
 
     @app.post("/api/projects/{project_id}/nodes")
     async def create_node(project_id: str, request: Request, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
-        node = db.create_node(project_id, await request.json())
+        node = db.create_node(project_id, await request.json(), actor=_actor(request))
         if not node:
             raise HTTPException(status_code=404, detail="Project not found")
         return node
 
     @app.patch("/api/projects/{project_id}/nodes/{node_id}")
     async def patch_node(project_id: str, node_id: str, request: Request, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
-        node = db.patch_node(project_id, node_id, await request.json())
+        node = db.patch_node(project_id, node_id, await request.json(), actor=_actor(request))
         if not node:
             raise HTTPException(status_code=404, detail="Node not found")
         return node
 
     @app.delete("/api/projects/{project_id}/nodes/{node_id}", status_code=204)
-    def delete_node(project_id: str, node_id: str, db: AppDatabase = Depends(_db)) -> None:
-        if not db.delete_node(project_id, node_id):
+    def delete_node(project_id: str, node_id: str, request: Request, db: AppDatabase = Depends(_db)) -> None:
+        if not db.delete_node(project_id, node_id, actor=_actor(request)):
             raise HTTPException(status_code=404, detail="Node not found")
+
+    @app.get("/api/projects/{project_id}/versions")
+    def list_versions(project_id: str, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
+        if not db.get_project(project_id):
+            raise HTTPException(status_code=404, detail="Project not found")
+        return {"versions": [version.model_dump() for version in db.list_change_versions(project_id)]}
+
+    @app.get("/api/projects/{project_id}/nodes/{node_id}/versions")
+    def list_node_versions(project_id: str, node_id: str, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
+        if not db.get_project(project_id):
+            raise HTTPException(status_code=404, detail="Project not found")
+        return {"versions": [version.model_dump() for version in db.list_change_versions(project_id, node_id)]}
 
     @app.post("/api/projects/{project_id}/edges")
     async def create_edge(project_id: str, request: Request, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
@@ -316,6 +328,11 @@ def create_app(
 
 def _db(request: Request) -> AppDatabase:
     return request.app.state.db
+
+
+def _actor(request: Request) -> str:
+    actor = request.headers.get("x-context-canvas-actor", "").strip()
+    return actor[:120] or "local user"
 
 
 def _cors_origins() -> list[str]:

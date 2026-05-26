@@ -1,10 +1,10 @@
 # Context Canvas Product Spec
 
-Current repo state as of 2026-05-22.
+Current repo state as of 2026-05-26.
 
 ## Summary
 
-Context Canvas is a minimal requirements canvas for centralizing project context. The current production-ready core supports a DB-backed React canvas, FastAPI backend, SQLite persistence, AI question answering against the saved canvas, chat history, and uploads.
+Context Canvas is a minimal requirements canvas for centralizing project context. The current production-ready core supports a DB-backed React canvas, FastAPI backend, SQLite persistence, contract and requirement change history, affected-node flags, AI question answering against the saved canvas, chat history, uploads, and local MCP context for coding agents.
 
 The product is currently an MVP for local use and change-request preparation. It is not yet a production-authenticated collaboration system.
 
@@ -29,12 +29,15 @@ The FastAPI service is the system of record for product data. It owns:
 - Analysis runs.
 - Chat threads.
 - Chat messages.
+- Contract and requirement version history.
+- Backend-managed audit and affected-node flag metadata.
+- Schema migration markers.
 
 All canvas nodes use one large editable `fields.content` body plus node-level
 metadata such as title, tags, updated time, and relationships. Nodes should not
 be modeled as many separate type-specific detail fields.
 
-The MCP service can read saved canvas context and write requirement/source nodes to the same SQLite database for coding-agent workflows. Jira, Confluence, Slack, and broader external-app workflows are later improvements.
+The MCP service can read saved canvas context and write requirement/source nodes to the same SQLite database for coding-agent workflows. MCP requirement write-back records audit metadata and version history. Jira, Confluence, Slack, and broader external-app workflows are later improvements.
 
 ## Current Feature Progress
 
@@ -48,10 +51,13 @@ The MCP service can read saved canvas context and write requirement/source nodes
 | AI analysis | Complete | `POST /analyze` and chat use OpenAI with saved SQLite canvas context. Chat replies are rendered as Markdown in the UI. |
 | Chat history | Complete | Chat threads/messages persisted and reloaded. |
 | DB-backed AI context | Complete | E2e proves analysis and chat read the saved SQLite canvas, including after API restart. |
+| Contract and requirement version history | Complete | Semantic changes create changelog-style audit rows; layout-only changes do not. |
+| Affected-node flags | Complete | Contract and requirement changes flag connected impacted nodes as review, outdated, needs-update, or conflict. |
+| Flagged-node plan drafting | Complete | Chat can draft an update plan for a flagged node without mutating the canvas graph. |
 | Source fetch/search | Deferred from core gate | Endpoints exist as experimental scaffolding; external tooling is not currently claimed production-ready. |
-| MCP canvas tools | Complete | E2e proves MCP reads saved API canvas state, returns agent-ready context, writes a requirement node, and the API can reload that node. |
+| MCP canvas tools | Complete | E2e proves MCP reads saved API canvas state, returns agent-ready context/resources/prompts, writes requirement/source nodes with audit history, and the API can reload that state. |
 | MCP external source tools | Deferred from core gate | Jira/Confluence/Figma/GitHub helpers exist as experimental scaffolding; external tooling is not currently claimed production-ready. |
-| Legacy SQLite migration | Complete for current legacy schemas | Shape-based migration covered by e2e. |
+| Legacy SQLite migration | Complete for current legacy schemas | Shape-based migration and schema migration tracking covered by e2e. |
 | Frontend runtime QA | Manual | Per current project direction, frontend interaction testing is manual; automated frontend checks are TypeScript build and lint. |
 | Auth/permissions | Not started | Out of MVP. |
 | Slack integration | Not started | Later improvement. |
@@ -69,6 +75,8 @@ The MCP service can read saved canvas context and write requirement/source nodes
 - `POST /api/projects/:projectId/nodes`
 - `PATCH /api/projects/:projectId/nodes/:nodeId`
 - `DELETE /api/projects/:projectId/nodes/:nodeId`
+- `GET /api/projects/:projectId/versions`
+- `GET /api/projects/:projectId/nodes/:nodeId/versions`
 - `POST /api/projects/:projectId/edges`
 - `PATCH /api/projects/:projectId/edges/:edgeId`
 - `DELETE /api/projects/:projectId/edges/:edgeId`
@@ -91,6 +99,8 @@ Production-supported local canvas tools:
 - `upsert_requirement_node`
 - `upsert_source_snapshot_node`
 - `summarize_canvas_nodes`
+
+`get_canvas_context` includes active impact flags and recent contract or requirement changes. `upsert_requirement_node` writes audit metadata and version history, including MCP-managed source support edges when source node IDs are supplied.
 
 Production-supported local canvas resources:
 
@@ -142,13 +152,14 @@ Prompt:
 
 ## Current Verification Status
 
-Latest verification run on 2026-05-22:
+Latest verification run on 2026-05-26:
 
 | Check | Result |
 | --- | --- |
-| `pnpm test:e2e` | Pass, 9 backend e2e tests |
+| `PYTHONPATH=services/api:services/mcp CONTEXT_CANVAS_DISABLE_CHANGE_AI=1 uv run --project . python -m unittest discover -s services/api/test -t . -v` | Pass, 11 backend e2e tests |
 | `pnpm build` | Pass |
 | `pnpm lint` | Pass |
+| `git diff --check` | Pass |
 
 Current backend e2e coverage:
 
@@ -158,8 +169,11 @@ Current backend e2e coverage:
 - Upload validation, SQLite metadata persistence, and file serving.
 - AI analysis reading the saved SQLite canvas, persisting analysis runs, preserving graph data, and surviving API restart.
 - Chat creation, message persistence, automatic title rename, current saved-canvas analysis, reload, and delete cascade.
-- MCP agent context flow over the saved SQLite canvas, including write-back visible through the API.
-- Legacy SQLite schema migration.
+- Contract and requirement version history, affected-node flags, and UI-only highlight stripping.
+- AI plan chat for flagged nodes without graph mutation.
+- Manual source snapshot storage and citation edges.
+- MCP agent context flow over the saved SQLite canvas, including resources/prompts and write-back visible through the API.
+- Legacy SQLite schema migration with schema migration tracking.
 
 ## Current Limitations
 
@@ -168,13 +182,14 @@ Current backend e2e coverage:
 - Frontend interaction QA is currently manual by project choice; automated frontend coverage is build and lint.
 - Jira, Confluence, Slack, and MCP external source workflows are deferred from the current production-ready core.
 - No vector database retrieval.
-- No explicit schema version table yet; migrations are currently table-shape based.
+- Schema migrations are tracked locally, but there is no production migration runner or rollback framework.
 
 ## Recommended Next Implementation Order
 
-1. Add explicit SQLite schema version tracking.
-2. Add a project switcher for multiple saved canvases.
-3. Add MCP project-scoped permission/auth controls before remote deployment.
-4. Add UI source capture/import flow with user confirmation.
-5. Add source integration settings UI for local Atlassian credentials.
-6. Add auth and permissions when preparing for production deployment.
+1. Add a project switcher for multiple saved canvases.
+2. Add MCP project-scoped permission/auth controls before remote deployment.
+3. Add a review queue for affected-node flags with accept, dismiss, and defer states.
+4. Add a version diff viewer for contract and requirement history.
+5. Add UI source capture/import flow with user confirmation.
+6. Add source integration settings UI for local Atlassian credentials.
+7. Add auth and permissions when preparing for production deployment.
