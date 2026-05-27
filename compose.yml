@@ -1,0 +1,99 @@
+name: context-canvas
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8787
+      RELOAD: 0
+      CONTEXT_CANVAS_DATABASE_URL: sqlite:////data/context-canvas.sqlite
+      CONTEXT_CANVAS_UPLOAD_DIR: /data/uploads
+      CONTEXT_CANVAS_MAX_UPLOAD_BYTES: ${CONTEXT_CANVAS_MAX_UPLOAD_BYTES:-10485760}
+      CONTEXT_CANVAS_CORS_ORIGINS: ${DOCKER_CONTEXT_CANVAS_CORS_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      ATLASSIAN_URL: ${ATLASSIAN_URL:-}
+      ATLASSIAN_EMAIL: ${ATLASSIAN_EMAIL:-}
+      ATLASSIAN_TOKEN: ${ATLASSIAN_TOKEN:-}
+    volumes:
+      - type: volume
+        source: context_canvas_data
+        target: /data
+        volume:
+          nocopy: true
+    healthcheck:
+      test:
+        [
+          "CMD",
+          ".venv/bin/python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8787/health', timeout=5).read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+      [
+        "uv",
+        "run",
+        "--no-sync",
+        "python",
+        "-m",
+        "context_canvas_mcp.main",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8790",
+        "--path",
+        "/mcp",
+      ]
+    environment:
+      CONTEXT_CANVAS_DATABASE_URL: sqlite:////data/context-canvas.sqlite
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      ATLASSIAN_URL: ${ATLASSIAN_URL:-}
+      ATLASSIAN_EMAIL: ${ATLASSIAN_EMAIL:-}
+      ATLASSIAN_TOKEN: ${ATLASSIAN_TOKEN:-}
+    volumes:
+      - type: volume
+        source: context_canvas_data
+        target: /data
+        volume:
+          nocopy: true
+    restart: unless-stopped
+
+  caddy:
+    build:
+      context: .
+      dockerfile: infra/caddy/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${DOCKER_VITE_API_BASE_URL:-}
+        VITE_MCP_URL: ${DOCKER_VITE_MCP_URL:-/mcp}
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:8080}
+    depends_on:
+      api:
+        condition: service_healthy
+      mcp:
+        condition: service_started
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  context_canvas_data:
+  caddy_data:
+  caddy_config:

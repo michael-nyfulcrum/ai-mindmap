@@ -1,0 +1,29 @@
+{$SITE_ADDRESS:localhost:8080} {
+	encode zstd gzip
+
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+
+	route {
+		handle /api/* {
+			reverse_proxy api:8787
+		}
+
+		handle /health {
+			reverse_proxy api:8787
+		}
+
+		handle /mcp* {
+			reverse_proxy mcp:8790
+		}
+
+		handle {
+			root * /srv/context-canvas
+			try_files {path} /index.html
+			file_server
+		}
+	}
+}

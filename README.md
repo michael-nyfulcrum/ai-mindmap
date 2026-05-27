@@ -24,7 +24,10 @@ The product API and SQLite database are the system of record for saved canvas da
 ## Quick Start
 
 ```sh
-make install
+git clone <repo-url>
+cd ai-mindmap
+make doctor
+make setup
 make dev
 ```
 
@@ -49,8 +52,40 @@ make dev-mcp
 make build
 make lint
 make test-e2e
+make compose-config
+make docker-up
+make docker-smoke
+make package
+make package-check
 make reset-db
 ```
+
+## Docker Demo
+
+```sh
+cp .env.example .env
+make docker-up
+make docker-smoke
+```
+
+The Caddy-backed demo runs at `http://127.0.0.1:8080` by default. The API is
+proxied at `/api`, health is available at `/health`, and MCP is proxied at
+`/mcp`.
+
+For a dedicated EC2 or DigitalOcean demo server, keep `SITE_ADDRESS=:8080` for
+local runs and set `DEMO_SITE_ADDRESS` to your domain in `.env`, point DNS to
+the server, open ports `80` and `443`, then run:
+
+```sh
+make env-demo
+make demo-check
+make server-preflight
+make demo-up
+make demo-smoke
+```
+
+See [Demo deployment](docs/deployment.md) for the full server checklist,
+packaging, and backup commands.
 
 ## Current Support
 
@@ -88,6 +123,14 @@ CONTEXT_CANVAS_MAX_UPLOAD_BYTES=10485760
 CONTEXT_CANVAS_CORS_ORIGINS=http://127.0.0.1:5173,http://localhost:5173
 VITE_API_BASE_URL=http://127.0.0.1:8787
 VITE_MCP_URL=http://127.0.0.1:8790/mcp
+SITE_ADDRESS=:8080
+DEMO_SITE_ADDRESS=
+APP_PORT=8080
+HTTP_PORT=80
+HTTPS_PORT=443
+DOCKER_CONTEXT_CANVAS_CORS_ORIGINS=http://localhost:8080,http://127.0.0.1:8080
+DOCKER_VITE_API_BASE_URL=
+DOCKER_VITE_MCP_URL=/mcp
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4.1-mini
 CONTEXT_CANVAS_DISABLE_CHANGE_AI=
