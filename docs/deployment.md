@@ -97,7 +97,8 @@ make env-demo
 ```
 
 Edit `.env`, replacing `demo.example.com` with the real domain and adding
-`OPENAI_API_KEY`. Then run:
+`OPENAI_API_KEY`. Keep `DOCKER_CONTEXT_CANVAS_CORS_ORIGINS` aligned with the
+same `https://<domain>` value. Then run:
 
 ```sh
 make server-preflight

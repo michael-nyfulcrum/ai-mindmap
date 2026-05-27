@@ -62,6 +62,10 @@ case "$mode" in
     require_env OPENAI_API_KEY
 
     case "$DEMO_SITE_ADDRESS" in
+      demo.example.com)
+        echo "Replace DEMO_SITE_ADDRESS=demo.example.com with your real demo domain." >&2
+        exit 1
+        ;;
       :*|localhost*|127.*)
         echo "DEMO_SITE_ADDRESS must be a public DNS name, not '$DEMO_SITE_ADDRESS'." >&2
         exit 1
@@ -72,6 +76,13 @@ case "$mode" in
       echo "Set DOCKER_CONTEXT_CANVAS_CORS_ORIGINS=https://$DEMO_SITE_ADDRESS for demo deploys." >&2
       exit 1
     fi
+    case ",${DOCKER_CONTEXT_CANVAS_CORS_ORIGINS:-}," in
+      *",https://$DEMO_SITE_ADDRESS,"*) ;;
+      *)
+        echo "DOCKER_CONTEXT_CANVAS_CORS_ORIGINS must include https://$DEMO_SITE_ADDRESS." >&2
+        exit 1
+        ;;
+    esac
 
     echo "Demo environment is ready for $DEMO_SITE_ADDRESS."
     ;;
