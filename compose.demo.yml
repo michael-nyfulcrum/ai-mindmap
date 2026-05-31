@@ -1,0 +1,12 @@
+services:
+  api:
+    environment:
+      CONTEXT_CANVAS_CORS_ORIGINS: ${DOCKER_CONTEXT_CANVAS_CORS_ORIGINS:-}
+
+  caddy:
+    environment:
+      SITE_ADDRESS: ${DEMO_SITE_ADDRESS:?Set DEMO_SITE_ADDRESS to your demo domain, for example demo.example.com}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"

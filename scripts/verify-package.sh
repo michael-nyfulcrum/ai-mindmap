@@ -44,6 +44,7 @@ require_entry "./infra/caddy/Dockerfile"
 require_entry "./scripts/docker-smoke.sh"
 require_entry "./scripts/docker-backup-data.sh"
 require_entry "./scripts/env-check.sh"
+require_entry "./scripts/live-status.sh"
 require_entry "./scripts/install-server-deps.sh"
 require_entry "./scripts/package-release.sh"
 

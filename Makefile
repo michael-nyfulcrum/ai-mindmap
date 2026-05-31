@@ -2,14 +2,16 @@ PNPM ?= pnpm
 UV ?= uv
 COMPOSE ?= docker compose
 COMPOSE_FILES ?= -f compose.yml
-DEMO_COMPOSE_FILES ?= -f compose.yml -f compose.demo.yml
+LIVE_COMPOSE_FILES ?= -f compose.yml -f compose.demo.yml
+DEMO_COMPOSE_FILES ?= $(LIVE_COMPOSE_FILES)
 APP_PORT ?= 8080
 BASE_URL ?= http://127.0.0.1:$(APP_PORT)
-DEMO_BASE_URL ?= https://$(DEMO_SITE_ADDRESS)
+LIVE_BASE_URL ?= https://$(DEMO_SITE_ADDRESS)
+DEMO_BASE_URL ?= $(LIVE_BASE_URL)
 
 .DEFAULT_GOAL := help
 
-.PHONY: help doctor install setup env env-demo dev dev-api dev-web dev-mcp build lint test-e2e test-backend reset-db clean db-path compose-config docker-build docker-up docker-down docker-restart docker-logs docker-ps docker-smoke docker-health docker-shell-api docker-volume-list docker-backup docker-backup-data docker-clean demo-check demo-config demo-up demo-down demo-smoke server-preflight package package-check release-check server-bootstrap
+.PHONY: help doctor install setup env env-demo dev dev-api dev-web dev-mcp build lint test-e2e test-backend reset-db clean db-path compose-config docker-build docker-up docker-down docker-restart docker-logs docker-ps docker-smoke docker-health docker-shell-api docker-volume-list docker-backup docker-backup-data docker-clean live-check live-config live-preflight live-up live-down live-restart live-smoke live-health live-status live-logs live-backup live-backup-data live-deploy demo-check demo-config demo-up demo-down demo-smoke server-preflight package package-check release-check server-bootstrap
 
 help:
 	@printf "Context Canvas tasks\n\n"
@@ -24,16 +26,21 @@ help:
 	@printf "  make build          Build all workspaces\n"
 	@printf "  make lint           Run lint/compile checks\n"
 	@printf "  make test-e2e       Run backend e2e tests\n\n"
-	@printf "Docker/demo:\n"
+	@printf "Docker/local:\n"
 	@printf "  make compose-config Validate local Docker Compose config\n"
 	@printf "  make docker-up      Build and start local Docker demo on APP_PORT=8080\n"
 	@printf "  make docker-smoke   Check web, health, and projects endpoints\n"
 	@printf "  make docker-logs    Follow container logs\n"
-	@printf "  make demo-check     Validate required demo deployment env\n"
-	@printf "  make demo-config    Validate dedicated-server Compose config\n"
-	@printf "  make server-preflight Check server DNS, ports, Docker, and demo config\n"
-	@printf "  make demo-up        Start Caddy with DEMO_SITE_ADDRESS for 80/443\n"
-	@printf "  make demo-smoke     Check deployed demo BASE_URL=https://DEMO_SITE_ADDRESS\n"
+	@printf "\nLive deployment:\n"
+	@printf "  make live-check     Validate required live deployment env\n"
+	@printf "  make live-config    Validate live Docker Compose config\n"
+	@printf "  make live-preflight Check DNS, ports, Docker, and live config\n"
+	@printf "  make live-up        Build and start live stack on 80/443\n"
+	@printf "  make live-smoke     Check deployed live site\n"
+	@printf "  make live-deploy    Run preflight, start live stack, then smoke-test it\n"
+	@printf "  make live-status    Show health, containers, disk, volumes, and recent logs\n"
+	@printf "  make live-logs      Follow live container logs\n"
+	@printf "  make live-down      Stop the live stack\n"
 	@printf "  make docker-backup  Copy SQLite DB from the data volume\n"
 	@printf "  make docker-backup-data Archive SQLite backup plus uploads\n"
 	@printf "  make release-check  Run lint, build, and backend e2e tests\n"
@@ -132,20 +139,53 @@ docker-backup-data:
 docker-clean:
 	$(COMPOSE) $(COMPOSE_FILES) down --remove-orphans
 
-demo-check:
-	./scripts/env-check.sh demo
+live-check:
+	./scripts/env-check.sh live
 
-demo-config:
-	$(COMPOSE) $(DEMO_COMPOSE_FILES) config >/dev/null
+live-config:
+	$(COMPOSE) $(LIVE_COMPOSE_FILES) config >/dev/null
 
-demo-up: demo-check demo-config
-	$(COMPOSE) $(DEMO_COMPOSE_FILES) up -d --build
+live-preflight:
+	./scripts/server-preflight.sh
 
-demo-down:
-	$(COMPOSE) $(DEMO_COMPOSE_FILES) down
+live-up: live-check live-config
+	$(COMPOSE) $(LIVE_COMPOSE_FILES) up -d --build
 
-demo-smoke: demo-check
+live-down:
+	$(COMPOSE) $(LIVE_COMPOSE_FILES) down
+
+live-restart:
+	$(COMPOSE) $(LIVE_COMPOSE_FILES) restart
+
+live-smoke: live-check
 	@set -a; [ ! -f .env ] || . ./.env; set +a; BASE_URL="$${BASE_URL:-https://$${DEMO_SITE_ADDRESS}}" ./scripts/docker-smoke.sh
+
+live-health: live-check
+	@set -a; [ ! -f .env ] || . ./.env; set +a; curl -fsS "$${BASE_URL:-https://$${DEMO_SITE_ADDRESS}}/health"
+
+live-status: live-check
+	COMPOSE="$(COMPOSE)" COMPOSE_FILES="$(LIVE_COMPOSE_FILES)" ./scripts/live-status.sh
+
+live-logs:
+	$(COMPOSE) $(LIVE_COMPOSE_FILES) logs -f --tail=200
+
+live-backup:
+	$(MAKE) docker-backup COMPOSE_FILES="$(LIVE_COMPOSE_FILES)"
+
+live-backup-data:
+	COMPOSE="$(COMPOSE)" COMPOSE_FILES="$(LIVE_COMPOSE_FILES)" ./scripts/docker-backup-data.sh
+
+live-deploy: live-preflight live-up live-smoke
+
+demo-check: live-check
+
+demo-config: live-config
+
+demo-up: live-up
+
+demo-down: live-down
+
+demo-smoke: live-smoke
 
 server-preflight:
 	./scripts/server-preflight.sh

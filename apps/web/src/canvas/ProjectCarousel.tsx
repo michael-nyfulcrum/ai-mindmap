@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import type { CanvasProject } from "./canvasTypes";
 
 type ProjectCarouselProps = {
@@ -46,11 +46,14 @@ export function ProjectCarousel({
   return (
     <main className="project-picker">
       <header className="project-picker-header">
-        <h1>
+        <h1 className="project-picker-title">
           <Sparkles size={22} />
           Context Canvas
         </h1>
-        <p>Select a project to open, or start a new one</p>
+        <button className="project-picker-cta" onClick={onCreateProject} disabled={isLoading}>
+          <Plus size={16} />
+          New Project
+        </button>
       </header>
 
       <div className="project-carousel-wrapper">
@@ -70,11 +73,6 @@ export function ProjectCarousel({
               onDelete={() => onDeleteProject(project.id)}
             />
           ))}
-
-          <button className="project-card-new" onClick={onCreateProject} disabled={isLoading}>
-            <Plus size={36} strokeWidth={1.5} />
-            <span>New Project</span>
-          </button>
         </div>
 
         <button className="carousel-nav-btn" onClick={() => scroll("right")} aria-label="Scroll right">
@@ -126,12 +124,14 @@ function ProjectCard({ project, gradient, disabled, onSelect, onRename, onDelete
 
   return (
     <article className={`project-card${canOpen ? " project-card-selectable" : ""}`}>
-      <button
-        className="project-card-main"
+      <div
+        className={`project-card-thumbnail${!canOpen ? " is-disabled" : ""}`}
         style={{ background: gradient }}
         onClick={canOpen ? onSelect : undefined}
-        disabled={!canOpen}
-        aria-label={`Open ${project.name}`}
+        role={canOpen ? "button" : undefined}
+        aria-label={canOpen ? `Open ${project.name}` : undefined}
+        tabIndex={canOpen ? 0 : undefined}
+        onKeyDown={canOpen ? (e) => { if (e.key === "Enter" || e.key === " ") onSelect(); } : undefined}
       >
         {isRenaming ? (
           <input
@@ -147,10 +147,10 @@ function ProjectCard({ project, gradient, disabled, onSelect, onRename, onDelete
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <h2 className="project-card-title">{project.name}</h2>
+          <span className="project-card-title">{project.name}</span>
         )}
         <time className="project-card-date">{date}</time>
-      </button>
+      </div>
 
       <footer className="project-card-footer" onClick={(e) => e.stopPropagation()}>
         {isConfirmingDelete ? (
@@ -160,7 +160,7 @@ function ProjectCard({ project, gradient, disabled, onSelect, onRename, onDelete
               <Check size={12} /> Yes
             </button>
             <button className="project-card-action" onClick={() => setIsConfirmingDelete(false)}>
-              <X size={12} /> No
+              No
             </button>
           </>
         ) : (

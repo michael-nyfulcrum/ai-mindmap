@@ -55,7 +55,7 @@ case "$mode" in
     require_command uv
     echo "Local toolchain is ready."
     ;;
-  demo)
+  demo|live)
     load_dotenv_defaults
 
     require_env DEMO_SITE_ADDRESS
@@ -64,6 +64,10 @@ case "$mode" in
     case "$DEMO_SITE_ADDRESS" in
       demo.example.com)
         echo "Replace DEMO_SITE_ADDRESS=demo.example.com with your real demo domain." >&2
+        exit 1
+        ;;
+      http://*|https://*|*/*)
+        echo "DEMO_SITE_ADDRESS must be a bare hostname, for example 7865420.xyz, not '$DEMO_SITE_ADDRESS'." >&2
         exit 1
         ;;
       :*|localhost*|127.*)
@@ -84,7 +88,7 @@ case "$mode" in
         ;;
     esac
 
-    echo "Demo environment is ready for $DEMO_SITE_ADDRESS."
+    echo "Live environment is ready for $DEMO_SITE_ADDRESS."
     ;;
   *)
     echo "Unknown env-check mode: $mode" >&2

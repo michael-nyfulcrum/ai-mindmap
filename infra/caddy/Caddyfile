@@ -1,11 +1,9 @@
-{
-	servers {
-		protocols h1 h2
-	}
-}
-
 {$SITE_ADDRESS:localhost:8080} {
 	encode zstd gzip
+	log {
+		output stdout
+		format console
+	}
 
 	header {
 		-Server

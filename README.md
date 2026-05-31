@@ -55,6 +55,8 @@ make test-e2e
 make compose-config
 make docker-up
 make docker-smoke
+make live-deploy
+make live-status
 make package
 make package-check
 make reset-db
@@ -72,19 +74,23 @@ The Caddy-backed demo runs at `http://127.0.0.1:8080` by default. The API is
 proxied at `/api`, health is available at `/health`, and MCP is proxied at
 `/mcp`.
 
-For a dedicated EC2 or DigitalOcean demo server, keep `SITE_ADDRESS=:8080` for
-local runs and set `DEMO_SITE_ADDRESS` to your domain in `.env`, point DNS to
-the server, open ports `80` and `443`, then run:
+For a dedicated EC2 or DigitalOcean server, keep `SITE_ADDRESS=:8080` for local
+runs and set `DEMO_SITE_ADDRESS` to the bare domain in `.env`, without
+`https://`. Keep `DOCKER_CONTEXT_CANVAS_CORS_ORIGINS` aligned to
+`https://<domain>`, point DNS to the server, open ports `80` and `443`, then
+run:
 
 ```sh
 make env-demo
-make demo-check
-make server-preflight
-make demo-up
-make demo-smoke
+make live-deploy
+make live-status
 ```
 
-See [Demo deployment](docs/deployment.md) for the full server checklist,
+Run these on the target server, or with a Docker context that points at it.
+`make live-preflight` stops if DNS for the live domain does not resolve back to
+that server.
+
+See [Deployment](docs/deployment.md) for the full server checklist, monitoring,
 packaging, and backup commands.
 
 ## Current Support
