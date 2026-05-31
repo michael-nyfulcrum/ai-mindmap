@@ -59,8 +59,8 @@ export function CanvasAiPanel({
     <aside className="chat-panel" aria-label="Canvas chat">
       <header className="chat-topbar">
         <div className="chat-title">
-          <Bot size={17} />
-          <span>Chat</span>
+          <Bot size={16} />
+          <span>AI Chat</span>
         </div>
         <div className="chat-topbar-actions">
           <button type="button" onClick={onToggleCollapsed} aria-label="Collapse chats" title="Collapse chats">
@@ -72,12 +72,17 @@ export function CanvasAiPanel({
         </div>
       </header>
 
-      <nav className="chat-list" aria-label="Saved chats">
-        {isCreatingChat ? <div className="chat-list-saving">Saving chat...</div> : null}
+      <nav className="chat-list" aria-label="Conversations">
+        {isCreatingChat ? (
+          <div className="chat-list-saving">
+            <span className="project-picker-spinner" aria-hidden="true" style={{ borderTopColor: "rgb(255 255 255 / 60%)", borderColor: "rgb(255 255 255 / 18%)" }} />
+            Starting…
+          </div>
+        ) : null}
         {chats.length === 0 ? (
           <button type="button" className="chat-list-empty" onClick={onNewChat} disabled={isCreatingChat}>
             <Plus size={15} />
-            <span>New chat</span>
+            <span>Start a conversation</span>
           </button>
         ) : (
           chats.map((chat) => {
@@ -122,12 +127,12 @@ export function CanvasAiPanel({
           {loadingChatId ? (
             <div className="chat-empty">
               <MessageSquareText size={22} />
-              <p>Loading chat...</p>
+              <p>Loading…</p>
             </div>
           ) : messages.length === 0 && !isSending ? (
             <div className="chat-empty">
               <MessageSquareText size={22} />
-              <p>{activeChatId ? "Ask about the requirements and context in this project." : "Start a chat to ask questions about this project."}</p>
+              <p>{activeChatId ? "Ask anything about your canvas." : "Ask a question to start analyzing this project."}</p>
             </div>
           ) : (
             <>
@@ -174,7 +179,7 @@ export function CanvasAiPanel({
             }}
           />
           <Button icon={<Send size={15} />} variant="primary" disabled={!question.trim() || isSending} aria-label="Send message">
-            {isSending ? "..." : ""}
+            {isSending ? "…" : ""}
           </Button>
         </form>
       </section>

@@ -596,13 +596,21 @@ export function CanvasPage() {
             <Sparkles size={18} />
             {project.name}
           </h1>
-          <p>{project.description}</p>
+          {project.description ? <p>{project.description}</p> : null}
         </div>
         <div className="save-state">
-          <Circle size={10} fill="currentColor" />
-          <span>{saveState === "loading" ? "Loading" : saveState === "saving" ? "Saving" : saveState === "error" ? "Save error" : "Saved to DB"}</span>
+          <Circle size={8} fill="currentColor" />
+          <span>
+            {saveState === "loading"
+              ? "Loading…"
+              : saveState === "saving"
+                ? "Saving…"
+                : saveState === "error"
+                  ? "Sync error"
+                  : "Saved"}
+          </span>
           <Button icon={<Code2 size={14} />} variant="ghost" onClick={() => setIsHandoffOpen(true)}>
-            Agent Handoff
+            Handoff
           </Button>
           <Button icon={<LayoutGrid size={14} />} variant="ghost" onClick={() => void handleBackToProjects()}>
             Projects

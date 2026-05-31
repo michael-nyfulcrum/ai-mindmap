@@ -1,6 +1,6 @@
 export function AppLoading() {
   return (
-    <main className="app-loading" aria-label="Loading AI Mindmap">
+    <main className="app-loading" aria-label="Loading">
       <div className="app-loading-animation">
         <div className="app-loading-ai-badge">AI</div>
         <span className="app-loading-node app-loading-node-one" />
@@ -8,7 +8,7 @@ export function AppLoading() {
         <span className="app-loading-node app-loading-node-three" />
       </div>
       <h1>AI Mindmap</h1>
-      <p>Loading your workspace...</p>
+      <p>Preparing your canvas&hellip;</p>
     </main>
   );
 }

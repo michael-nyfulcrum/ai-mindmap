@@ -73,7 +73,7 @@ export function ProjectCarousel({
               AI Mindmap
             </h1>
             <p className="project-picker-subtitle">
-              Map out project context, contracts, and requirements.
+              Visualize, connect, and analyze your project's ideas with AI.
             </p>
           </div>
           <div className="project-picker-actions">
