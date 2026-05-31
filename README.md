@@ -57,6 +57,7 @@ make docker-up
 make docker-smoke
 make live-deploy
 make live-status
+make server-deploy
 make package
 make package-check
 make reset-db
@@ -89,6 +90,16 @@ make live-status
 Run these on the target server, or with a Docker context that points at it.
 `make live-preflight` stops if DNS for the live domain does not resolve back to
 that server.
+
+For the current server, deploy from a local checkout with rsync:
+
+```sh
+make server-deploy
+```
+
+This syncs to `root@143.198.194.117:/root/ai-mindmap`, preserves server `.env`
+and data through `.rsyncignore`, then runs `make live-deploy` and
+`make live-status` on the server.
 
 See [Deployment](docs/deployment.md) for the full server checklist, monitoring,
 packaging, and backup commands.

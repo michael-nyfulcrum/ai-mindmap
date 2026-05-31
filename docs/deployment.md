@@ -77,21 +77,37 @@ make live-smoke
 The older `demo-*` targets remain as compatibility aliases for existing scripts,
 but new server work should use `live-*`.
 
-## Git-Based Server Update
+## Rsync-Based Server Update
 
-For a server checkout using the canonical repository:
+The live server is updated with `rsync`, not `git pull`. The default Makefile
+target is:
 
 ```sh
-git remote set-url origin git@github.com:michael-nyfulcrum/ai-mindmap.git
-git checkout dev
-git pull --ff-only
-make live-deploy
-make live-status
+make server-deploy
 ```
 
-Run those commands on the target server or with a Docker context that points at
-the target server. Running them from a laptop whose public IP does not match the
-domain will fail during `make live-preflight`.
+By default this syncs the current checkout to:
+
+```text
+root@143.198.194.117:/root/ai-mindmap
+```
+
+Then it runs `make live-deploy` and `make live-status` on the server. Override
+the destination when needed:
+
+```sh
+make server-deploy SERVER_HOST=root@143.198.194.117 SERVER_PATH=/root/ai-mindmap
+```
+
+The rsync command uses `.rsyncignore`, which preserves server-local `.env`,
+SQLite files, uploads, dependencies, virtualenvs, and build artifacts. Keep
+server-specific secrets and deployment values in the server `.env`.
+
+Use the lower-level sync command when you want to copy files without deploying:
+
+```sh
+make server-rsync
+```
 
 ## Deployment Command Log
 

@@ -17,6 +17,7 @@ Use this guide before changing the repo.
 - Use `make env-demo` on a live/demo server to start from `.env.demo.example`.
 - The canonical remote is `git@github.com:michael-nyfulcrum/ai-mindmap.git`.
 - Use `dev` as the normal working branch; `main` is the stable branch promoted from `dev`.
+- Update the live server with `rsync`, not `git pull`; use `make server-rsync` or `make server-deploy`.
 
 ## Verification
 
@@ -38,6 +39,7 @@ The frontend build currently emits warnings about `lottie-web` eval usage and la
 - Public live/demo deploys should set `DEMO_SITE_ADDRESS`, `OPENAI_API_KEY`, and `DOCKER_CONTEXT_CANVAS_CORS_ORIGINS=https://<domain>`.
 - `DEMO_SITE_ADDRESS` must be a bare hostname, for example `7865420.xyz`, not `https://7865420.xyz`.
 - Run `make live-deploy` on the target server or through a Docker context that points at it; `make live-preflight` blocks when DNS does not point at the current host.
+- The current server target is `root@143.198.194.117:/root/ai-mindmap`; `.rsyncignore` preserves `.env`, SQLite, uploads, dependencies, and build artifacts.
 - Caddy serves the web app and proxies `/api`, `/health`, and `/mcp`.
 - Use `make live-backup` for a SQLite-only backup and `make live-backup-data` for SQLite plus uploads on live deployments.
 

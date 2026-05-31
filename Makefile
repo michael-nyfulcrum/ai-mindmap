@@ -1,6 +1,7 @@
 PNPM ?= pnpm
 UV ?= uv
 COMPOSE ?= docker compose
+RSYNC ?= rsync
 COMPOSE_FILES ?= -f compose.yml
 LIVE_COMPOSE_FILES ?= -f compose.yml -f compose.demo.yml
 DEMO_COMPOSE_FILES ?= $(LIVE_COMPOSE_FILES)
@@ -8,10 +9,12 @@ APP_PORT ?= 8080
 BASE_URL ?= http://127.0.0.1:$(APP_PORT)
 LIVE_BASE_URL ?= https://$(DEMO_SITE_ADDRESS)
 DEMO_BASE_URL ?= $(LIVE_BASE_URL)
+SERVER_HOST ?= root@143.198.194.117
+SERVER_PATH ?= /root/ai-mindmap
 
 .DEFAULT_GOAL := help
 
-.PHONY: help doctor install setup env env-demo dev dev-api dev-web dev-mcp build lint test-e2e test-backend reset-db clean db-path compose-config docker-build docker-up docker-down docker-restart docker-logs docker-ps docker-smoke docker-health docker-shell-api docker-volume-list docker-backup docker-backup-data docker-clean live-check live-config live-preflight live-up live-down live-restart live-smoke live-health live-status live-logs live-backup live-backup-data live-deploy demo-check demo-config demo-up demo-down demo-smoke server-preflight package package-check release-check server-bootstrap
+.PHONY: help doctor install setup env env-demo dev dev-api dev-web dev-mcp build lint test-e2e test-backend reset-db clean db-path compose-config docker-build docker-up docker-down docker-restart docker-logs docker-ps docker-smoke docker-health docker-shell-api docker-volume-list docker-backup docker-backup-data docker-clean live-check live-config live-preflight live-up live-down live-restart live-smoke live-health live-status live-logs live-backup live-backup-data live-deploy demo-check demo-config demo-up demo-down demo-smoke server-preflight server-rsync server-deploy package package-check release-check server-bootstrap
 
 help:
 	@printf "Context Canvas tasks\n\n"
@@ -41,6 +44,8 @@ help:
 	@printf "  make live-status    Show health, containers, disk, volumes, and recent logs\n"
 	@printf "  make live-logs      Follow live container logs\n"
 	@printf "  make live-down      Stop the live stack\n"
+	@printf "  make server-rsync   Copy this checkout to SERVER_HOST:SERVER_PATH\n"
+	@printf "  make server-deploy  Rsync to server, then run live deploy and status there\n"
 	@printf "  make docker-backup  Copy SQLite DB from the data volume\n"
 	@printf "  make docker-backup-data Archive SQLite backup plus uploads\n"
 	@printf "  make release-check  Run lint, build, and backend e2e tests\n"
@@ -189,6 +194,12 @@ demo-smoke: live-smoke
 
 server-preflight:
 	./scripts/server-preflight.sh
+
+server-rsync:
+	$(RSYNC) -az --delete --exclude-from=.rsyncignore ./ $(SERVER_HOST):$(SERVER_PATH)/
+
+server-deploy: server-rsync
+	ssh $(SERVER_HOST) 'cd $(SERVER_PATH) && make live-deploy && make live-status'
 
 package:
 	./scripts/package-release.sh

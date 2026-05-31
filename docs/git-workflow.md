@@ -14,6 +14,9 @@ Use two long-lived branches:
 No GitHub Actions are required for this project. Run the relevant local checks
 before pushing.
 
+The live server is not updated with `git pull`; use the rsync deployment flow
+documented in [Deployment](deployment.md).
+
 ## Fresh Clone
 
 ```sh
