@@ -56,6 +56,7 @@ export function CanvasPage() {
   const [projects, setProjects] = useState<CanvasProject[]>([]);
   const [showProjectPicker, setShowProjectPicker] = useState(true);
   const [isLoadingProject, setIsLoadingProject] = useState(false);
+  const [projectLoadingLabel, setProjectLoadingLabel] = useState("Loading project...");
   const [project, setProject] = useState<CanvasProject>({
     id: "",
     name: "AI Mindmap",
@@ -458,6 +459,7 @@ export function CanvasPage() {
   const handleSelectProject = useCallback(
     async (selectedProjectId: string) => {
       setIsLoadingProject(true);
+      setProjectLoadingLabel("Opening project...");
       try {
         const snapshot = await loadCanvas(selectedProjectId);
         setProject(snapshot.project);
@@ -473,6 +475,7 @@ export function CanvasPage() {
         setSaveState("error");
       } finally {
         setIsLoadingProject(false);
+        setProjectLoadingLabel("Loading project...");
       }
     },
     [fitView, loadProjectChats, setEdges, setNodes],
@@ -482,35 +485,30 @@ export function CanvasPage() {
     setIsLoadingProject(true);
     try {
       const template = templateId ? PROJECT_TEMPLATES.find((t) => t.id === templateId) : undefined;
+      setProjectLoadingLabel(template ? `Creating ${template.name}...` : "Creating project...");
       const name = template?.defaultProjectName
         ?? `Mindmap ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
-      let snapshot = await createProject(name);
-
-      if (template) {
-        const now = nowIso();
-        const idMap = new Map(template.nodes.map((n) => [n.id, createId("node")]));
-        const nodes = template.nodes.map((n) => ({
-          ...n,
-          id: idMap.get(n.id)!,
-          data: { ...n.data, updatedAt: now },
-        }));
-        const edges = template.edges.map((e) => ({
-          ...e,
-          id: createId("edge"),
-          source: idMap.get(e.source)!,
-          target: idMap.get(e.target)!,
-          data: { relationship: e.data?.relationship ?? "", updatedAt: now },
-        }));
-        snapshot = await saveCanvas({
-          project: {
-            ...snapshot.project,
-            description: template.projectDescription,
-            viewport: template.viewport,
-          },
-          nodes,
-          edges,
-        });
-      }
+      const now = nowIso();
+      const idMap = template ? new Map(template.nodes.map((n) => [n.id, createId("node")])) : undefined;
+      const nodes = template?.nodes.map((n) => ({
+        ...n,
+        id: idMap?.get(n.id) ?? n.id,
+        data: { ...n.data, updatedAt: now },
+      }));
+      const edges = template?.edges.map((e) => ({
+        ...e,
+        id: createId("edge"),
+        source: idMap?.get(e.source) ?? e.source,
+        target: idMap?.get(e.target) ?? e.target,
+        data: { relationship: e.data?.relationship ?? "", updatedAt: now },
+      }));
+      const snapshot = await createProject({
+        name,
+        description: template?.projectDescription,
+        viewport: template?.viewport,
+        nodes,
+        edges,
+      });
 
       setProjects((prev) => [snapshot.project, ...prev]);
       setProject(snapshot.project);
@@ -526,6 +524,7 @@ export function CanvasPage() {
       setSaveState("error");
     } finally {
       setIsLoadingProject(false);
+      setProjectLoadingLabel("Loading project...");
     }
   }, [fitView, loadProjectChats, setEdges, setNodes]);
 
@@ -571,6 +570,7 @@ export function CanvasPage() {
       <ProjectCarousel
         projects={projects}
         isLoading={isLoadingProject}
+        loadingLabel={projectLoadingLabel}
         onSelectProject={(id) => void handleSelectProject(id)}
         onCreateProject={(templateId) => void handleCreateProject(templateId)}
         onRenameProject={(id, name) => void handleRenameProject(id, name)}

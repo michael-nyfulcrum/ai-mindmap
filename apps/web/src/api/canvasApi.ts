@@ -2,6 +2,14 @@ import type { AnalysisResponse, CanvasProject, CanvasSnapshot, ChatMessage, Chat
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
+type CreateProjectInput = {
+  name: string;
+  description?: string;
+  viewport?: CanvasProject["viewport"];
+  nodes?: CanvasSnapshot["nodes"];
+  edges?: CanvasSnapshot["edges"];
+};
+
 export async function listProjects() {
   const response = await fetch(`${API_BASE_URL}/api/projects`);
   if (!response.ok) {
@@ -20,11 +28,12 @@ export async function loadCanvas(projectId: string) {
   return (await response.json()) as CanvasSnapshot;
 }
 
-export async function createProject(name: string) {
+export async function createProject(input: string | CreateProjectInput) {
+  const payload = typeof input === "string" ? { name: input } : input;
   const response = await fetch(`${API_BASE_URL}/api/projects`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(payload),
   });
   if (!response.ok) {
     throw new Error("Failed to create project");

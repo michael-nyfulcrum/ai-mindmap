@@ -41,6 +41,35 @@ class ProjectAndCanvasE2ETest(ApiE2ECase):
         self.assertEqual(self.client.get(f"/api/projects/{project_id}").status_code, 404)
         self.assertEqual(self.sqlite_scalar("SELECT COUNT(*) FROM canvas_nodes WHERE project_id = ?", (project_id,)), 0)
 
+    def test_create_project_can_seed_initial_canvas_without_change_versions(self) -> None:
+        created = self.client.post(
+            "/api/projects",
+            json={
+                "name": "Seeded Template",
+                "description": "Initial template seed",
+                "viewport": {"x": 120, "y": 90, "zoom": 0.82},
+                "nodes": [
+                    make_node("node_contract", "Contract", "project_contract"),
+                    make_node("node_requirement", "Requirement"),
+                ],
+                "edges": [make_edge("edge_contract_requirement", "node_contract", "node_requirement", "implements")],
+            },
+        )
+        self.assertEqual(created.status_code, 200)
+        body = created.json()
+        project_id = body["project"]["id"]
+
+        self.assertEqual(body["project"]["description"], "Initial template seed")
+        self.assertEqual(body["project"]["viewport"]["zoom"], 0.82)
+        self.assertEqual(len(body["nodes"]), 2)
+        self.assertEqual(body["nodes"][0]["data"]["audit"]["createdBy"], "local user")
+        self.assertEqual(body["edges"][0]["source"], "node_contract")
+        self.assertEqual(self.sqlite_scalar("SELECT COUNT(*) FROM contract_change_versions WHERE project_id = ?", (project_id,)), 0)
+
+        reloaded = self.client.get(f"/api/projects/{project_id}/canvas")
+        self.assertEqual(reloaded.status_code, 200)
+        self.assertEqual(reloaded.json()["nodes"][1]["data"]["title"], "Requirement")
+
     def test_canvas_save_reload_restart_and_id_mismatch(self) -> None:
         project_id = self.create_project()
         snapshot = self.client.get(f"/api/projects/{project_id}/canvas").json()

@@ -39,11 +39,19 @@ def fetch_source(payload: dict[str, Any]) -> dict[str, Any]:
 def search_source_context(payload: dict[str, Any]) -> dict[str, Any]:
     query = str(payload.get("query") or "").strip()
     sources = payload.get("sources")
-    max_results = int(payload.get("maxResults") or 5)
+    max_results = _max_results(payload.get("maxResults"))
     if not isinstance(sources, list):
         sources = None
     result = search_sources(query=query, sources=sources, max_results=max_results)
     return result.model_dump()
+
+
+def _max_results(value: Any) -> int:
+    try:
+        parsed = int(value or 5)
+    except (TypeError, ValueError):
+        return 5
+    return max(1, min(parsed, 20))
 
 
 def _snapshot_from_document(document: dict[str, Any]) -> dict[str, Any]:

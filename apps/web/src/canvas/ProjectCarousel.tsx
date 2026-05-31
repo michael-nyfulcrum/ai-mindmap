@@ -7,6 +7,7 @@ import { TutorialDialog } from "./TutorialDialog";
 type ProjectCarouselProps = {
   projects: CanvasProject[];
   isLoading: boolean;
+  loadingLabel: string;
   onSelectProject: (projectId: string) => void;
   onCreateProject: (templateId?: string) => void;
   onRenameProject: (projectId: string, name: string) => void;
@@ -34,6 +35,7 @@ function gradientForId(id: string) {
 export function ProjectCarousel({
   projects,
   isLoading,
+  loadingLabel,
   onSelectProject,
   onCreateProject,
   onRenameProject,
@@ -63,7 +65,7 @@ export function ProjectCarousel({
 
   return (
     <>
-      <main className="project-picker">
+      <main className="project-picker" aria-busy={isLoading}>
         <header className="project-picker-header">
           <div>
             <h1 className="project-picker-title">
@@ -151,6 +153,13 @@ export function ProjectCarousel({
             ))
           )}
         </section>
+
+        {isLoading ? (
+          <div className="project-picker-loading" role="status" aria-live="polite">
+            <span className="project-picker-spinner" aria-hidden="true" />
+            <span>{loadingLabel}</span>
+          </div>
+        ) : null}
       </main>
 
       {showTutorial ? <TutorialDialog onClose={() => setShowTutorial(false)} /> : null}

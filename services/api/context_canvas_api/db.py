@@ -341,7 +341,15 @@ class AppDatabase:
         row = self.connection.execute("SELECT * FROM projects WHERE id = ?", (project_id,)).fetchone()
         return self._project(row) if row else None
 
-    def create_project(self, name: str, description: str | None = None) -> CanvasSnapshot:
+    def create_project(
+        self,
+        name: str,
+        description: str | None = None,
+        viewport: dict[str, Any] | None = None,
+        nodes: list[dict[str, Any]] | None = None,
+        edges: list[dict[str, Any]] | None = None,
+        actor: str = "local user",
+    ) -> CanvasSnapshot:
         now = utc_now()
         project = Project(
             id=f"project_{uuid4().hex}",
@@ -349,11 +357,39 @@ class AppDatabase:
             description=description,
             createdAt=now,
             updatedAt=now,
-            viewport={"x": 0, "y": 0, "zoom": 1},
+            viewport=viewport or {"x": 0, "y": 0, "zoom": 1},
         )
-        snapshot = CanvasSnapshot(project=project, nodes=[], edges=[])
-        self.save_snapshot(snapshot)
-        return snapshot
+        incoming_nodes = [
+            _with_audit_metadata(
+                _normalize_canvas_node({**node, "id": node.get("id") or f"node_{uuid4().hex}"}),
+                None,
+                actor,
+                now,
+                semantic_changed=True,
+            )
+            for node in nodes or []
+        ]
+        incoming_edges = [{**edge, "id": edge.get("id") or f"edge_{uuid4().hex}"} for edge in edges or []]
+        with self.connection:
+            self.connection.execute(
+                """
+                INSERT INTO projects (id, name, description, viewport_json, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    project.id,
+                    project.name,
+                    project.description,
+                    _json(project.viewport),
+                    project.createdAt,
+                    project.updatedAt,
+                ),
+            )
+            for node in incoming_nodes:
+                self._insert_node(project.id, node, now)
+            for edge in incoming_edges:
+                self._insert_edge(project.id, edge, now)
+        return self.get_snapshot(project.id) or CanvasSnapshot(project=project, nodes=incoming_nodes, edges=incoming_edges)
 
     def patch_project(self, project_id: str, payload: dict[str, Any]) -> Project | None:
         project = self.get_project(project_id)

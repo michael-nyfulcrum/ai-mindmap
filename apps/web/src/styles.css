@@ -1445,6 +1445,12 @@ button:disabled {
   }
 }
 
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes galaxy-fallback-drift {
   0%,
   100% {
@@ -1538,6 +1544,7 @@ button:disabled {
 /* ── Project Picker / Grid ──────────────────────────────────────────── */
 
 .project-picker {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100vw;
@@ -1668,6 +1675,30 @@ button:disabled {
 
 .project-grid-empty p {
   margin: 0;
+}
+
+.project-picker-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgb(6 12 26 / 58%);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 750;
+  backdrop-filter: blur(2px);
+}
+
+.project-picker-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgb(255 255 255 / 32%);
+  border-top-color: #ffffff;
+  border-radius: 999px;
+  animation: spin 760ms linear infinite;
 }
 
 .project-card {

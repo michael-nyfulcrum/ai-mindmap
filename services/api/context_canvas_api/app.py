@@ -23,6 +23,9 @@ load_project_dotenv()
 class CreateProjectRequest(BaseModel):
     name: str
     description: str | None = None
+    viewport: dict[str, Any] | None = None
+    nodes: list[dict[str, Any]] = Field(default_factory=list)
+    edges: list[dict[str, Any]] = Field(default_factory=list)
 
     @field_validator("name")
     @classmethod
@@ -115,8 +118,15 @@ def create_app(
         return {"projects": [project.model_dump() for project in db.list_projects()]}
 
     @app.post("/api/projects")
-    def create_project(payload: CreateProjectRequest, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
-        return db.create_project(payload.name, payload.description).model_dump()
+    def create_project(payload: CreateProjectRequest, request: Request, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
+        return db.create_project(
+            payload.name,
+            payload.description,
+            viewport=payload.viewport,
+            nodes=payload.nodes,
+            edges=payload.edges,
+            actor=_actor(request),
+        ).model_dump()
 
     @app.get("/api/projects/{project_id}")
     def get_project(project_id: str, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
