@@ -41,6 +41,13 @@ OPENAI_MODEL=gpt-4.1-mini
 DOCKER_CONTEXT_CANVAS_CORS_ORIGINS=https://demo.example.com
 ```
 
+For the current live domain, use:
+
+```sh
+DEMO_SITE_ADDRESS=7865420.xyz
+DOCKER_CONTEXT_CANVAS_CORS_ORIGINS=https://7865420.xyz
+```
+
 `DEMO_SITE_ADDRESS` must be a bare hostname such as `7865420.xyz`, not
 `https://7865420.xyz`. Caddy handles HTTPS for that host.
 
@@ -70,6 +77,22 @@ make live-smoke
 The older `demo-*` targets remain as compatibility aliases for existing scripts,
 but new server work should use `live-*`.
 
+## Git-Based Server Update
+
+For a server checkout using the canonical repository:
+
+```sh
+git remote set-url origin git@github.com:michael-nyfulcrum/ai-mindmap.git
+git checkout dev
+git pull --ff-only
+make live-deploy
+make live-status
+```
+
+Run those commands on the target server or with a Docker context that points at
+the target server. Running them from a laptop whose public IP does not match the
+domain will fail during `make live-preflight`.
+
 ## Deployment Command Log
 
 These are the commands used for a live deploy from a server checkout:
@@ -95,8 +118,9 @@ make server-bootstrap
 Use this path when setting up the repo from another machine:
 
 ```sh
-git clone <repo-url>
+git clone git@github.com:michael-nyfulcrum/ai-mindmap.git
 cd ai-mindmap
+git checkout dev
 make doctor
 make setup
 make lint

@@ -8,13 +8,15 @@ Use this guide before changing the repo.
 - `services/api`: FastAPI app and backend e2e tests.
 - `services/mcp`: FastMCP server that reads/writes the same canvas data.
 - `infra/caddy`: Caddy static web and reverse-proxy config.
-- `compose.yml` and `compose.demo.yml`: single-server Docker demo stack.
+- `compose.yml` and `compose.demo.yml`: single-server Docker/live stack.
 
 ## Local Setup
 
 - Run `make doctor` before assuming the toolchain is ready.
 - Run `make setup` for a fresh laptop checkout; it creates `.env` only if missing.
-- Use `make env-demo` on a demo server to start from `.env.demo.example`.
+- Use `make env-demo` on a live/demo server to start from `.env.demo.example`.
+- The canonical remote is `git@github.com:michael-nyfulcrum/ai-mindmap.git`.
+- Use `dev` as the normal working branch; `main` is the stable branch promoted from `dev`.
 
 ## Verification
 
@@ -22,8 +24,9 @@ Prefer the narrowest relevant check first, then broader checks when touching sha
 
 - Backend/API or MCP behavior: `make test-e2e`.
 - Frontend or TypeScript changes: `make build` and `make lint`.
-- Docker/Caddy/deployment changes: `make compose-config`, `make docker-up`, and `make docker-smoke`.
-- Demo server readiness: `make demo-check`, `make demo-config`, and `make server-preflight`.
+- Docker/Caddy local changes: `make compose-config`, `make docker-up`, and `make docker-smoke`.
+- Live server readiness: `make live-check`, `make live-config`, and `make live-preflight`.
+- Live deployment smoke/monitoring: `make live-smoke` and `make live-status`.
 - Release/package handoff: `make release-check`.
 - Always run `git diff --check` before committing.
 
@@ -32,9 +35,11 @@ The frontend build currently emits warnings about `lottie-web` eval usage and la
 ## Deployment Notes
 
 - Keep the deployment intentionally basic: one host, Docker Compose, Caddy, SQLite/uploads in the shared Docker volume.
-- Public demo deploys should set `DEMO_SITE_ADDRESS`, `OPENAI_API_KEY`, and `DOCKER_CONTEXT_CANVAS_CORS_ORIGINS=https://<domain>`.
+- Public live/demo deploys should set `DEMO_SITE_ADDRESS`, `OPENAI_API_KEY`, and `DOCKER_CONTEXT_CANVAS_CORS_ORIGINS=https://<domain>`.
+- `DEMO_SITE_ADDRESS` must be a bare hostname, for example `7865420.xyz`, not `https://7865420.xyz`.
+- Run `make live-deploy` on the target server or through a Docker context that points at it; `make live-preflight` blocks when DNS does not point at the current host.
 - Caddy serves the web app and proxies `/api`, `/health`, and `/mcp`.
-- Use `make docker-backup` for a SQLite-only backup and `make docker-backup-data` for SQLite plus uploads.
+- Use `make live-backup` for a SQLite-only backup and `make live-backup-data` for SQLite plus uploads on live deployments.
 
 ## Do Not Touch Casually
 

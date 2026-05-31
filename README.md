@@ -24,7 +24,7 @@ The product API and SQLite database are the system of record for saved canvas da
 ## Quick Start
 
 ```sh
-git clone <repo-url>
+git clone git@github.com:michael-nyfulcrum/ai-mindmap.git
 cd ai-mindmap
 make doctor
 make setup
@@ -111,6 +111,7 @@ packaging, and backup commands.
 
 ## Documentation
 
+- [Git workflow](docs/git-workflow.md)
 - [Product requirements](docs/product-requirements.md)
 - [Current product spec and progress tracker](docs/context-canvas-product-spec.md)
 - [API documentation](docs/api.md)
@@ -146,3 +147,10 @@ ATLASSIAN_TOKEN=
 ```
 
 Chat and analysis always use OpenAI. Contract change impact analysis uses OpenAI when available; tests can set `CONTEXT_CANVAS_DISABLE_CHANGE_AI=1` to use deterministic offline impact rules.
+
+## Git Workflow
+
+The canonical remote is `git@github.com:michael-nyfulcrum/ai-mindmap.git`.
+Use `dev` for ongoing work and keep `main` as the stable branch that receives
+occasional merges from `dev`. No GitHub Actions are required for this repo; run
+the relevant `make` checks locally before pushing.
