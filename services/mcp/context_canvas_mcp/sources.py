@@ -205,7 +205,7 @@ def search_sources(query: str, sources: list[str] | None = None, max_results: in
             result = SourceSearchResult(
                 status="no_matches",
                 query=query,
-                sources_requested=[source],  # type: ignore[list-item]
+                sources_requested=[],
                 message=f"{source} search is not available for this MVP.",
             )
         merged.extend(result.sources)

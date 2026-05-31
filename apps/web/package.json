@@ -12,9 +12,7 @@
   "dependencies": {
     "@vitejs/plugin-react": "^5.1.1",
     "@xyflow/react": "^12.9.3",
-    "lottie-react": "^2.4.1",
     "lucide-react": "^0.555.0",
-    "ogl": "^1.0.11",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",

@@ -1,12 +1,11 @@
-import Lottie from "lottie-react";
-import loadingAnimation from "../app/loadingAnimation.json";
-
 export function ChatThinking() {
   return (
     <article className="chat-message chat-message-assistant chat-message-thinking" aria-live="polite">
       <div className="chat-bubble chat-bubble-thinking">
-        <div className="chat-thinking-animation">
-          <Lottie animationData={loadingAnimation} loop autoplay />
+        <div className="chat-thinking-dots" aria-hidden="true">
+          <span />
+          <span />
+          <span />
         </div>
         <div>
           <strong>Thinking</strong>

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 from fastmcp import FastMCP
@@ -37,7 +38,10 @@ class CanvasSummary(BaseModel):
     summary: str = Field(description="Plain-language context summary.")
 
 
-def register_capabilities(app: FastMCP) -> None:
+def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
+    def canvas_store() -> CanvasStore:
+        return CanvasStore(db_path) if db_path else CanvasStore.from_settings()
+
     @app.tool(
         name="echo",
         tags=CORE_TAGS | {"diagnostic"},
@@ -117,7 +121,7 @@ def register_capabilities(app: FastMCP) -> None:
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": False},
     )
     def list_canvas_projects(limit: int = 20):
-        return CanvasStore.from_settings().list_projects(limit=limit)
+        return canvas_store().list_projects(limit=limit)
 
     @app.tool(
         name="get_canvas_snapshot",
@@ -126,7 +130,7 @@ def register_capabilities(app: FastMCP) -> None:
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": False},
     )
     def get_canvas_snapshot(project_id: str | None = None):
-        snapshot = CanvasStore.from_settings().get_snapshot(project_id)
+        snapshot = canvas_store().get_snapshot(project_id)
         if not snapshot:
             return {"status": "not_found", "message": "No matching Context Canvas project was found."}
         return {"status": "ok", "snapshot": snapshot}
@@ -141,7 +145,7 @@ def register_capabilities(app: FastMCP) -> None:
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": False},
     )
     def get_canvas_context(project_id: str | None = None, task: str | None = None):
-        context = CanvasStore.from_settings().get_agent_context(project_id=project_id, task=task)
+        context = canvas_store().get_agent_context(project_id=project_id, task=task)
         if not context:
             return {"status": "not_found", "message": "No matching Context Canvas project was found."}
         return {"status": "ok", "context": context}
@@ -160,7 +164,7 @@ def register_capabilities(app: FastMCP) -> None:
         tags: list[str] | None = None,
         node_id: str | None = None,
     ):
-        return CanvasStore.from_settings().upsert_requirement(
+        return canvas_store().upsert_requirement(
             project_id=project_id,
             title=title,
             content=content,
@@ -186,7 +190,7 @@ def register_capabilities(app: FastMCP) -> None:
         tags: list[str] | None = None,
         node_id: str | None = None,
     ):
-        return CanvasStore.from_settings().upsert_source_snapshot(
+        return canvas_store().upsert_source_snapshot(
             project_id=project_id,
             title=title,
             source_type=source_type,
@@ -239,12 +243,12 @@ def register_capabilities(app: FastMCP) -> None:
 
     @app.resource("context-canvas://projects", tags=CORE_TAGS | {"canvas", "database"})
     def canvas_projects_resource() -> str:
-        projects = CanvasStore.from_settings().list_projects(limit=50)
+        projects = canvas_store().list_projects(limit=50)
         return json.dumps([project.model_dump() for project in projects], ensure_ascii=False)
 
     @app.resource("context-canvas://project/{project_id}/context", tags=CORE_TAGS | {"canvas", "database"})
     def canvas_project_context_resource(project_id: str) -> str:
-        context = CanvasStore.from_settings().get_agent_context(project_id=project_id)
+        context = canvas_store().get_agent_context(project_id=project_id)
         if not context:
             return f"Project not found: {project_id}"
         return context.markdown

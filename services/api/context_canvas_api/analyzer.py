@@ -209,7 +209,7 @@ def _openai_client():
 
 
 def _openai_model() -> str:
-    return os.getenv("OPENAI_MODEL", "").strip() or "gpt-4.1-mini"
+    return "gpt-4.1-mini"
 
 
 def _analysis_payload(snapshot: CanvasSnapshot, question: str) -> str:

@@ -10,11 +10,6 @@ RUN pnpm install --frozen-lockfile
 
 COPY apps/web ./apps/web
 
-ARG VITE_API_BASE_URL=
-ARG VITE_MCP_URL=/mcp
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL \
-    VITE_MCP_URL=$VITE_MCP_URL
-
 RUN pnpm --filter @context-canvas/web build
 
 FROM caddy:2-alpine

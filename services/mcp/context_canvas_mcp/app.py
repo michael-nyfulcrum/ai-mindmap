@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastmcp import FastMCP
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
@@ -10,7 +12,7 @@ SERVER_NAME = "Context Canvas MCP"
 SERVER_VERSION = "0.1.0"
 
 
-def create_app() -> FastMCP:
+def create_app(db_path: Path | None = None) -> FastMCP:
     app = FastMCP(
         name=SERVER_NAME,
         version=SERVER_VERSION,
@@ -22,7 +24,7 @@ def create_app() -> FastMCP:
             "SQLite database remain the system of record."
         ),
     )
-    register_capabilities(app)
+    register_capabilities(app, db_path=db_path)
     _register_health_route(app)
     return app
 

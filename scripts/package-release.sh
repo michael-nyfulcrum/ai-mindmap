@@ -3,7 +3,7 @@ set -euo pipefail
 
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 output_dir="${PACKAGE_DIR:-dist/packages}"
-package_name="${PACKAGE_NAME:-context-canvas-demo-${timestamp}.tar.gz}"
+package_name="${PACKAGE_NAME:-context-canvas-${timestamp}.tar.gz}"
 package_path="${output_dir}/${package_name}"
 
 mkdir -p "${output_dir}"

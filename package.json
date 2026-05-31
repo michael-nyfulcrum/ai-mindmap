@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20.19 <21 || >=22.12"
+  },
   "scripts": {
     "dev": "pnpm --parallel --filter @context-canvas/api --filter @context-canvas/web dev",
     "dev:web": "pnpm --filter @context-canvas/web dev",

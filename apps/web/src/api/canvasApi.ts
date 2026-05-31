@@ -1,4 +1,4 @@
-import type { AnalysisResponse, CanvasSnapshot, ChatMessage, ChatThread, ContractChangeVersion } from "../canvas/canvasTypes";
+import type { AnalysisResponse, CanvasProject, CanvasSnapshot, ChatMessage, ChatThread, ContractChangeVersion } from "../canvas/canvasTypes";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8787";
 
@@ -31,6 +31,28 @@ export async function createProject(name: string) {
   }
 
   return (await response.json()) as CanvasSnapshot;
+}
+
+export async function renameProject(projectId: string, name: string) {
+  const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to rename project");
+  }
+
+  return (await response.json()) as CanvasProject;
+}
+
+export async function deleteProject(projectId: string) {
+  const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to delete project");
+  }
 }
 
 export async function saveCanvas(snapshot: CanvasSnapshot) {

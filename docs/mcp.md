@@ -14,16 +14,10 @@ Endpoint:
 http://127.0.0.1:8790/mcp
 ```
 
-By default, MCP reads the local API database:
+MCP reads the same SQLite database as the API:
 
 ```text
 services/api/context-canvas.sqlite
-```
-
-Override the database path when needed:
-
-```sh
-CONTEXT_CANVAS_DB_PATH=/absolute/path/to/context-canvas.sqlite make dev-mcp
 ```
 
 ## Coding Agent Workflow

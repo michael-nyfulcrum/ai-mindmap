@@ -1,3 +1,4 @@
+import { memo } from "react";
 import {
   Brain,
   CheckSquare,
@@ -32,7 +33,7 @@ const nodeButtons: Array<{ type: CanvasNodeType; label: string; icon: React.Reac
   { type: "note", label: "Note", icon: <NotebookPen size={18} /> },
 ];
 
-export function CanvasToolbar({
+export const CanvasToolbar = memo(function CanvasToolbar({
   onAddNode,
   onFitView,
   onSave,
@@ -67,4 +68,4 @@ export function CanvasToolbar({
       </Button>
     </aside>
   );
-}
+});

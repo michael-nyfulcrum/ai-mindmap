@@ -24,8 +24,7 @@ def _repo_root_env() -> Path:
 
 
 def ai_configuration_status() -> dict[str, str | bool]:
-    model = os.getenv("OPENAI_MODEL", "").strip() or "gpt-4.1-mini"
     return {
-        "model": model,
+        "model": "gpt-4.1-mini",
         "openaiConfigured": bool(os.getenv("OPENAI_API_KEY", "").strip()),
     }

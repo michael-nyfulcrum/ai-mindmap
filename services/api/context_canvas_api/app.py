@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 from contextlib import asynccontextmanager
-import os
 from pathlib import Path
 from typing import Any
 
@@ -208,11 +207,7 @@ def create_app(
     def create_upload(payload: UploadRequest, request: Request, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
         if not db.get_project(payload.projectId):
             raise HTTPException(status_code=404, detail="Project not found")
-        configured_upload_dir = request.app.state.upload_dir or os.getenv(
-            "CONTEXT_CANVAS_UPLOAD_DIR",
-            Path(__file__).resolve().parents[1] / "uploads",
-        )
-        resolved_upload_dir = Path(configured_upload_dir)
+        resolved_upload_dir = request.app.state.upload_dir or _upload_dir()
         resolved_upload_dir.mkdir(parents=True, exist_ok=True)
         try:
             header, encoded = payload.dataUrl.split(",", 1)
@@ -221,9 +216,7 @@ def create_app(
             data = base64.b64decode(encoded, validate=True)
         except Exception as exc:
             raise HTTPException(status_code=400, detail="Invalid data URL") from exc
-        configured_max_upload_bytes = request.app.state.max_upload_bytes or int(
-            os.getenv("CONTEXT_CANVAS_MAX_UPLOAD_BYTES", str(10 * 1024 * 1024))
-        )
+        configured_max_upload_bytes = request.app.state.max_upload_bytes or 10 * 1024 * 1024
         if len(data) > configured_max_upload_bytes:
             raise HTTPException(status_code=413, detail="Upload is too large")
         safe_name = "".join(char if char.isalnum() or char in "._-" else "_" for char in payload.filename)
@@ -336,10 +329,19 @@ def _actor(request: Request) -> str:
 
 
 def _cors_origins() -> list[str]:
-    configured = os.getenv("CONTEXT_CANVAS_CORS_ORIGINS", "").strip()
-    if configured:
-        return [origin.strip() for origin in configured.split(",") if origin.strip()]
-    return ["http://127.0.0.1:5173", "http://localhost:5173"]
+    return [
+        "http://127.0.0.1:5173",
+        "http://localhost:5173",
+        "http://127.0.0.1:8080",
+        "http://localhost:8080",
+    ]
+
+
+def _upload_dir() -> Path:
+    docker_data_dir = Path("/data")
+    if docker_data_dir.is_dir():
+        return docker_data_dir / "uploads"
+    return Path(__file__).resolve().parents[1] / "uploads"
 
 
 app = create_app()

@@ -12,14 +12,36 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Circle, Code2, PanelRightOpen, Plus, Sparkles } from "lucide-react";
+import { Circle, Code2, LayoutGrid, PanelRightOpen, Sparkles } from "lucide-react";
 import { CanvasAiPanel } from "./CanvasAiPanel";
 import { DeveloperHandoffPanel } from "./DeveloperHandoffPanel";
 import { CanvasInspector } from "./CanvasInspector";
 import { CanvasToolbar } from "./CanvasToolbar";
-import { GalaxyBackground } from "./GalaxyBackground";
-import { createChat, createProject, deleteChat, listChats, listProjects, loadCanvas, loadChat, saveCanvas, sendChatMessage, uploadAsset } from "../api/canvasApi";
-import { defaultFieldsForType, type CanvasFlowEdge, type CanvasFlowNode, type CanvasNodeData, type CanvasNodeType, type CanvasProject, type ChatMessage, type ChatThread } from "./canvasTypes";
+import { ProjectCarousel } from "./ProjectCarousel";
+import {
+  createChat,
+  createProject,
+  deleteChat,
+  deleteProject,
+  listChats,
+  listProjects,
+  loadCanvas,
+  loadChat,
+  renameProject,
+  saveCanvas,
+  sendChatMessage,
+  uploadAsset,
+} from "../api/canvasApi";
+import {
+  defaultFieldsForType,
+  type CanvasFlowEdge,
+  type CanvasFlowNode,
+  type CanvasNodeData,
+  type CanvasNodeType,
+  type CanvasProject,
+  type ChatMessage,
+  type ChatThread,
+} from "./canvasTypes";
 import { ContextNode } from "./nodes/ContextNode";
 import { Button } from "../shared/ui/Button";
 import { createId } from "../shared/ids";
@@ -30,6 +52,9 @@ const AppLoading = lazy(() => import("../app/AppLoading").then((module) => ({ de
 const MIN_LOADING_MS = 4200;
 
 export function CanvasPage() {
+  const [projects, setProjects] = useState<CanvasProject[]>([]);
+  const [showProjectPicker, setShowProjectPicker] = useState(true);
+  const [isLoadingProject, setIsLoadingProject] = useState(false);
   const [project, setProject] = useState<CanvasProject>({
     id: "",
     name: "Context Canvas",
@@ -85,46 +110,29 @@ export function CanvasPage() {
     setMessages(active.messages);
   }, []);
 
+  // On mount: load project list and show the picker
   useEffect(() => {
     let cancelled = false;
 
-    async function loadInitialProject() {
+    async function loadProjectList() {
       const minimumLoading = delay(MIN_LOADING_MS);
       try {
-        setSaveState("loading");
-        const projects = await listProjects();
-        const firstProject = projects.projects[0] ?? (await createProject("Untitled Canvas")).project;
-        const snapshot = await loadCanvas(firstProject.id);
-
-        if (cancelled) {
-          return;
-        }
-
-        setProject(snapshot.project);
-        setNodes(snapshot.nodes);
-        setEdges(snapshot.edges);
-        await loadProjectChats(snapshot.project.id);
-        setSaveState("saved");
+        const result = await listProjects();
+        if (cancelled) return;
+        setProjects(result.projects);
         await minimumLoading;
-        if (cancelled) {
-          return;
-        }
-        setIsBooting(false);
-        window.requestAnimationFrame(() => fitView({ padding: 0.18 }));
+        if (!cancelled) setIsBooting(false);
       } catch {
         await minimumLoading;
-        if (!cancelled) {
-          setSaveState("error");
-          setIsBooting(false);
-        }
+        if (!cancelled) setIsBooting(false);
       }
     }
 
-    void loadInitialProject();
+    void loadProjectList();
     return () => {
       cancelled = true;
     };
-  }, [fitView, loadProjectChats, setEdges, setNodes]);
+  }, []);
 
   const persist = useCallback(async () => {
     const {
@@ -446,24 +454,100 @@ export function CanvasPage() {
     [highlightCitations, nodes, setCenter],
   );
 
-  const newProject = useCallback(async () => {
-    const name = `Canvas ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
-    const snapshot = await createProject(name);
-    setProject(snapshot.project);
-    setNodes(snapshot.nodes);
-    setEdges(snapshot.edges);
-    setActiveNodeIds([]);
-    setActiveEdgeIds([]);
-    setIsInspectorCollapsed(false);
-    await loadProjectChats(snapshot.project.id);
-    window.requestAnimationFrame(() => fitView({ padding: 0.18 }));
+  // --- Project picker handlers ---
+
+  const handleSelectProject = useCallback(
+    async (selectedProjectId: string) => {
+      setIsLoadingProject(true);
+      try {
+        const snapshot = await loadCanvas(selectedProjectId);
+        setProject(snapshot.project);
+        setNodes(snapshot.nodes);
+        setEdges(snapshot.edges);
+        setActiveNodeIds([]);
+        setActiveEdgeIds([]);
+        await loadProjectChats(snapshot.project.id);
+        setSaveState("saved");
+        setShowProjectPicker(false);
+        window.requestAnimationFrame(() => fitView({ padding: 0.18 }));
+      } catch {
+        setSaveState("error");
+      } finally {
+        setIsLoadingProject(false);
+      }
+    },
+    [fitView, loadProjectChats, setEdges, setNodes],
+  );
+
+  const handleCreateProject = useCallback(async () => {
+    setIsLoadingProject(true);
+    try {
+      const name = `Canvas ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+      const snapshot = await createProject(name);
+      setProjects((prev) => [snapshot.project, ...prev]);
+      setProject(snapshot.project);
+      setNodes(snapshot.nodes);
+      setEdges(snapshot.edges);
+      setActiveNodeIds([]);
+      setActiveEdgeIds([]);
+      await loadProjectChats(snapshot.project.id);
+      setSaveState("saved");
+      setShowProjectPicker(false);
+      window.requestAnimationFrame(() => fitView({ padding: 0.18 }));
+    } catch {
+      setSaveState("error");
+    } finally {
+      setIsLoadingProject(false);
+    }
   }, [fitView, loadProjectChats, setEdges, setNodes]);
+
+  const handleRenameProject = useCallback(
+    async (targetProjectId: string, name: string) => {
+      try {
+        const updated = await renameProject(targetProjectId, name);
+        setProjects((prev) => prev.map((p) => (p.id === targetProjectId ? updated : p)));
+        if (project.id === targetProjectId) setProject(updated);
+      } catch {
+        // silently ignore — list stays unchanged
+      }
+    },
+    [project.id],
+  );
+
+  const handleDeleteProject = useCallback(async (targetProjectId: string) => {
+    try {
+      await deleteProject(targetProjectId);
+      setProjects((prev) => prev.filter((p) => p.id !== targetProjectId));
+    } catch {
+      // silently ignore — list stays unchanged
+    }
+  }, []);
+
+  const handleBackToProjects = useCallback(async () => {
+    if (project.id) await persist();
+    const result = await listProjects();
+    setProjects(result.projects);
+    setShowProjectPicker(true);
+  }, [persist, project.id]);
 
   if (isBooting) {
     return (
       <Suspense fallback={<main className="app-loading" aria-label="Loading Context Canvas" />}>
         <AppLoading />
       </Suspense>
+    );
+  }
+
+  if (showProjectPicker) {
+    return (
+      <ProjectCarousel
+        projects={projects}
+        isLoading={isLoadingProject}
+        onSelectProject={(id) => void handleSelectProject(id)}
+        onCreateProject={() => void handleCreateProject()}
+        onRenameProject={(id, name) => void handleRenameProject(id, name)}
+        onDeleteProject={(id) => void handleDeleteProject(id)}
+      />
     );
   }
 
@@ -492,14 +576,13 @@ export function CanvasPage() {
           <Button icon={<Code2 size={14} />} variant="ghost" onClick={() => setIsHandoffOpen(true)}>
             Handoff
           </Button>
-          <Button icon={<Plus size={14} />} variant="ghost" onClick={() => void newProject()}>
-            New
+          <Button icon={<LayoutGrid size={14} />} variant="ghost" onClick={() => void handleBackToProjects()}>
+            Projects
           </Button>
         </div>
       </header>
 
       <section className="flow-region">
-        <GalaxyBackground />
         <ReactFlow
           nodes={nodes}
           edges={edges}

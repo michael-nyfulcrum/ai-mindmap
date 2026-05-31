@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import unittest
 
 from fastmcp import Client
@@ -11,18 +10,6 @@ from test.helpers import ApiE2ECase, make_edge, make_node
 
 
 class McpCanvasContextE2ETest(ApiE2ECase):
-    def setUp(self) -> None:
-        super().setUp()
-        self.previous_db_path = os.environ.get("CONTEXT_CANVAS_DB_PATH")
-        os.environ["CONTEXT_CANVAS_DB_PATH"] = str(self.db_path)
-
-    def tearDown(self) -> None:
-        if self.previous_db_path is None:
-            os.environ.pop("CONTEXT_CANVAS_DB_PATH", None)
-        else:
-            os.environ["CONTEXT_CANVAS_DB_PATH"] = self.previous_db_path
-        super().tearDown()
-
     def test_mcp_reads_and_updates_saved_canvas_context_for_coding_agents(self) -> None:
         project_id = self.create_project("MCP agent project")
         snapshot = self.client.get(f"/api/projects/{project_id}/canvas").json()
@@ -41,7 +28,7 @@ class McpCanvasContextE2ETest(ApiE2ECase):
         )
 
         async def scenario() -> None:
-            async with Client(create_mcp_app()) as mcp:
+            async with Client(create_mcp_app(db_path=self.db_path)) as mcp:
                 tools = await mcp.list_tools()
                 tool_names = {tool.name for tool in tools}
                 self.assertTrue(
