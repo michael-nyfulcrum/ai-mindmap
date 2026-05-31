@@ -88,6 +88,20 @@ case "$mode" in
         ;;
     esac
 
+    case "${DOCKER_VITE_API_BASE_URL:-}" in
+      http://127.*|http://localhost*|https://127.*|https://localhost*)
+        echo "DOCKER_VITE_API_BASE_URL must not point at localhost or 127.0.0.1 for live deploys." >&2
+        exit 1
+        ;;
+    esac
+
+    case "${DOCKER_VITE_MCP_URL:-}" in
+      http://127.*|http://localhost*|https://127.*|https://localhost*)
+        echo "DOCKER_VITE_MCP_URL must not point at localhost or 127.0.0.1 for live deploys." >&2
+        exit 1
+        ;;
+    esac
+
     echo "Live environment is ready for $DEMO_SITE_ADDRESS."
     ;;
   *)

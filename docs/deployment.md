@@ -51,6 +51,13 @@ DOCKER_CONTEXT_CANVAS_CORS_ORIGINS=https://7865420.xyz
 `DEMO_SITE_ADDRESS` must be a bare hostname such as `7865420.xyz`, not
 `https://7865420.xyz`. Caddy handles HTTPS for that host.
 
+Leave `DOCKER_VITE_API_BASE_URL` empty for normal single-domain deploys. The
+web app will call the same origin through Caddy (`/api` and `/mcp`), which
+avoids browsers trying to reach local services on a user's device. Set
+`DOCKER_VITE_API_BASE_URL` only when intentionally hosting the API on a separate
+public origin. `make live-check` rejects localhost or `127.0.0.1` values for
+`DOCKER_VITE_API_BASE_URL` and `DOCKER_VITE_MCP_URL` during live deploys.
+
 Then run:
 
 ```sh
@@ -65,6 +72,9 @@ load balancer, or unusual NAT setup.
 
 Caddy will request and renew HTTPS certificates automatically when
 `DEMO_SITE_ADDRESS` is a real domain reachable on ports `80` and `443`.
+The Caddy config serves hashed Vite assets with long immutable caching and
+serves the HTML shell with `Cache-Control: no-cache`, so normal refreshes pick
+up newly deployed bundles without requiring users to clear browser cache.
 
 `make live-deploy` runs the deployment flow:
 

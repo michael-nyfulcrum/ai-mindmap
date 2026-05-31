@@ -118,14 +118,12 @@ export function CanvasPage() {
       const minimumLoading = delay(MIN_LOADING_MS);
       try {
         const result = await listProjects();
-        if (cancelled) return;
-        setProjects(result.projects);
-        await minimumLoading;
-        if (!cancelled) setIsBooting(false);
+        if (!cancelled) setProjects(result.projects);
       } catch {
-        await minimumLoading;
-        if (!cancelled) setIsBooting(false);
+        // show empty state — user can create a new project
       }
+      await minimumLoading;
+      if (!cancelled) setIsBooting(false);
     }
 
     void loadProjectList();
