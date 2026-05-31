@@ -1,6 +1,6 @@
 import type { AnalysisResponse, CanvasProject, CanvasSnapshot, ChatMessage, ChatThread, ContractChangeVersion } from "../canvas/canvasTypes";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8787";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 export async function listProjects() {
   const response = await fetch(`${API_BASE_URL}/api/projects`);
@@ -165,5 +165,13 @@ export async function uploadAsset(input: { projectId: string; filename: string; 
     url: string;
     createdAt: string;
   };
-  return { ...upload, url: `${API_BASE_URL}${upload.url}` };
+  return { ...upload, url: toPublicUrl(upload.url) };
+}
+
+function toPublicUrl(path: string) {
+  if (/^https?:\/\//.test(path)) {
+    return path;
+  }
+
+  return `${API_BASE_URL}${path}`;
 }

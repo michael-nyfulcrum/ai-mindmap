@@ -10,8 +10,8 @@ type DeveloperHandoffPanelProps = {
   onClose: () => void;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8787";
-const MCP_URL = import.meta.env.VITE_MCP_URL ?? "http://127.0.0.1:8790/mcp";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || `${window.location.origin}`;
+const MCP_URL = import.meta.env.VITE_MCP_URL || `${window.location.origin}/mcp`;
 
 export function DeveloperHandoffPanel({ project, nodes, edges, onClose }: DeveloperHandoffPanelProps) {
   const prompt = buildDeveloperPrompt(project, nodes, edges);
