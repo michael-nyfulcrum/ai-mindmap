@@ -8,7 +8,7 @@ from starlette.responses import PlainTextResponse
 
 from context_canvas_mcp.registry import register_capabilities
 
-SERVER_NAME = "Context Canvas MCP"
+SERVER_NAME = "Mindmap MCP"
 SERVER_VERSION = "0.1.0"
 
 
@@ -18,7 +18,7 @@ def create_app(db_path: Path | None = None) -> FastMCP:
         version=SERVER_VERSION,
         on_duplicate="error",
         instructions=(
-            "Context Canvas MCP server. Use this server to read saved SQLite requirements "
+            "Mindmap MCP server. Use this server to read saved SQLite requirements "
             "canvas context before coding tasks and to add or update requirement/source "
             "nodes when implementation decisions change. The FastAPI product API and "
             "SQLite database remain the system of record."

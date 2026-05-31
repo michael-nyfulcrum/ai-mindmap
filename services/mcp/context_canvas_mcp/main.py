@@ -7,7 +7,7 @@ from context_canvas_mcp.app import app
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run the Context Canvas FastMCP server.")
+    parser = argparse.ArgumentParser(description="Run the Mindmap FastMCP server.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8790)
     parser.add_argument("--path", default="/mcp")

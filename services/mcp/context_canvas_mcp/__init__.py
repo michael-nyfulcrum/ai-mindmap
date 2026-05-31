@@ -1,2 +1,1 @@
-"""Context Canvas FastMCP source connector service."""
-
+"""Mindmap FastMCP source connector service."""

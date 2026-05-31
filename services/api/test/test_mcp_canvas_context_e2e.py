@@ -46,10 +46,10 @@ class McpCanvasContextE2ETest(ApiE2ECase):
                 self.assertIn("use_context_canvas_for_task", prompt_names)
                 resources = await mcp.list_resources()
                 resource_uris = {str(resource.uri) for resource in resources}
-                self.assertIn("context-canvas://projects", resource_uris)
+                self.assertIn("mindmap://projects", resource_uris)
                 prompt = await mcp.get_prompt("use_context_canvas_for_task", {"task": "Implement the agent-facing requirements flow."})
                 self.assertIn("get_canvas_context", str(prompt))
-                projects_resource = await mcp.read_resource("context-canvas://projects")
+                projects_resource = await mcp.read_resource("mindmap://projects")
                 self.assertIn(project_id, str(projects_resource))
 
                 projects = await mcp.call_tool("list_canvas_projects", {"limit": 10})
@@ -97,7 +97,7 @@ class McpCanvasContextE2ETest(ApiE2ECase):
 
                 updated_context = await mcp.call_tool("get_canvas_context", {"project_id": project_id})
                 self.assertIn("Agent Context Tooling", _first_content(updated_context)["context"]["markdown"])
-                project_resource = await mcp.read_resource(f"context-canvas://project/{project_id}/context")
+                project_resource = await mcp.read_resource(f"mindmap://project/{project_id}/context")
                 self.assertIn("Agent Context Tooling", str(project_resource))
 
         import asyncio
@@ -112,18 +112,18 @@ class McpCanvasContextE2ETest(ApiE2ECase):
             stored_node["data"]["fields"],
             {"content": "Coding agents can read and update saved requirements through MCP after implementation decisions."},
         )
-        self.assertEqual(stored_node["data"]["audit"]["createdBy"], "context_canvas_mcp")
+        self.assertEqual(stored_node["data"]["audit"]["createdBy"], "mindmap_mcp")
         self.assertEqual(
             self.sqlite_scalar(
                 "SELECT created_by FROM contract_change_versions WHERE project_id = ? AND node_id = ?",
                 (project_id, "node_requirement_agent_context"),
             ),
-            "context_canvas_mcp",
+            "mindmap_mcp",
         )
         self.assertFalse(
             any(
                 edge["target"] == "node_requirement_agent_context"
-                and edge["data"].get("managedBy") == "context_canvas_mcp"
+                and edge["data"].get("managedBy") == "mindmap_mcp"
                 for edge in api_snapshot["edges"]
             )
         )

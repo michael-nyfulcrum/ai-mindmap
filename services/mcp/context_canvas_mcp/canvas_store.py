@@ -294,7 +294,7 @@ class CanvasStore:
             node = _with_audit_metadata(
                 node=node,
                 existing=current_node,
-                actor="context_canvas_mcp",
+                actor="mindmap_mcp",
                 now=now,
                 touched=current_node is None or _node_changed(current_node, node),
                 clear_impact=bool(changed_fields),
@@ -321,7 +321,7 @@ class CanvasStore:
                     before=current_node,
                     after=node,
                     changed_fields=changed_fields,
-                    actor="context_canvas_mcp",
+                    actor="mindmap_mcp",
                     now=now,
                 )
             connection.execute("UPDATE projects SET updated_at = ? WHERE id = ?", (now, project_id))
@@ -506,7 +506,7 @@ class CanvasStore:
                 "target": target_id,
                 "type": "smoothstep",
                 "label": "supports",
-                "data": {"relationship": "supports", "updatedAt": now, "managedBy": "context_canvas_mcp"},
+                "data": {"relationship": "supports", "updatedAt": now, "managedBy": "mindmap_mcp"},
             }
             connection.execute(
                 """
@@ -723,7 +723,7 @@ def _source_snapshot_content(
         f"Source type\n{source_type.strip() or 'manual'}",
         f"Source ID\n{source_id.strip()}",
         f"Fetched at\n{fetched_at}",
-        "Added through Context Canvas MCP.",
+        "Added through Mindmap MCP.",
     ]
     return "\n\n".join(part for part in parts if part)
 

@@ -20,7 +20,7 @@ from context_canvas_mcp.sources import (
     search_sources,
 )
 
-CORE_TAGS = {"context-canvas", "source"}
+CORE_TAGS = {"mindmap", "source"}
 
 
 class EchoResponse(BaseModel):
@@ -58,7 +58,7 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": True},
     )
     def search_jira_issues_tool(query: str, max_results: int = 5):
-        return search_jira_issues(query=query, max_results=min(max(max_results, 1), 10))
+        return _tool_json(search_jira_issues(query=query, max_results=min(max(max_results, 1), 10)))
 
     @app.tool(
         name="fetch_jira_issue",
@@ -67,7 +67,7 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": True},
     )
     def fetch_jira_issue_tool(issue_key: str):
-        return fetch_jira_issue(issue_key)
+        return _tool_json(fetch_jira_issue(issue_key))
 
     @app.tool(
         name="search_confluence_pages",
@@ -76,7 +76,7 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": True},
     )
     def search_confluence_pages_tool(query: str, max_results: int = 5):
-        return search_confluence_pages(query=query, max_results=min(max(max_results, 1), 10))
+        return _tool_json(search_confluence_pages(query=query, max_results=min(max(max_results, 1), 10)))
 
     @app.tool(
         name="fetch_confluence_page",
@@ -85,7 +85,7 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": True},
     )
     def fetch_confluence_page_tool(page_id: str):
-        return fetch_confluence_page(page_id)
+        return _tool_json(fetch_confluence_page(page_id))
 
     @app.tool(
         name="fetch_figma_link_metadata",
@@ -94,7 +94,7 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": True},
     )
     def fetch_figma_link_metadata_tool(url: str):
-        return fetch_figma_link_metadata(url)
+        return _tool_json(fetch_figma_link_metadata(url))
 
     @app.tool(
         name="fetch_github_issue_or_pr",
@@ -103,7 +103,7 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": True},
     )
     def fetch_github_issue_or_pr_tool(url: str):
-        return fetch_github_issue_or_pr(url)
+        return _tool_json(fetch_github_issue_or_pr(url))
 
     @app.tool(
         name="search_sources",
@@ -112,16 +112,17 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": True},
     )
     def search_sources_tool(query: str, sources: list[str] | None = None, max_results: int = 5):
-        return search_sources(query=query, sources=sources, max_results=min(max(max_results, 1), 10))
+        return _tool_json(search_sources(query=query, sources=sources, max_results=min(max(max_results, 1), 10)))
 
     @app.tool(
         name="list_canvas_projects",
         tags=CORE_TAGS | {"canvas", "database"},
-        description="List saved Context Canvas projects from the shared SQLite database.",
+        description="List saved Mindmap projects from the shared SQLite database.",
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": False},
     )
     def list_canvas_projects(limit: int = 20):
-        return canvas_store().list_projects(limit=limit)
+        projects = canvas_store().list_projects(limit=limit)
+        return _tool_json({"projects": projects})
 
     @app.tool(
         name="get_canvas_snapshot",
@@ -132,8 +133,8 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
     def get_canvas_snapshot(project_id: str | None = None):
         snapshot = canvas_store().get_snapshot(project_id)
         if not snapshot:
-            return {"status": "not_found", "message": "No matching Context Canvas project was found."}
-        return {"status": "ok", "snapshot": snapshot}
+            return _tool_json({"status": "not_found", "message": "No matching Mindmap project was found."})
+        return _tool_json({"status": "ok", "snapshot": snapshot})
 
     @app.tool(
         name="get_canvas_context",
@@ -147,13 +148,13 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
     def get_canvas_context(project_id: str | None = None, task: str | None = None):
         context = canvas_store().get_agent_context(project_id=project_id, task=task)
         if not context:
-            return {"status": "not_found", "message": "No matching Context Canvas project was found."}
-        return {"status": "ok", "context": context}
+            return _tool_json({"status": "not_found", "message": "No matching Mindmap project was found."})
+        return _tool_json({"status": "ok", "context": context})
 
     @app.tool(
         name="upsert_requirement_node",
         tags=CORE_TAGS | {"canvas", "database", "write"},
-        description="Create or update a requirement node in a saved Context Canvas project.",
+        description="Create or update a requirement node in a saved Mindmap project.",
         annotations={"readOnlyHint": False, "idempotentHint": False, "openWorldHint": False},
     )
     def upsert_requirement_node(
@@ -164,19 +165,19 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         tags: list[str] | None = None,
         node_id: str | None = None,
     ):
-        return canvas_store().upsert_requirement(
+        return _tool_json(canvas_store().upsert_requirement(
             project_id=project_id,
             title=title,
             content=content,
             source_node_ids=source_node_ids,
             tags=tags,
             node_id=node_id,
-        )
+        ))
 
     @app.tool(
         name="upsert_source_snapshot_node",
         tags=CORE_TAGS | {"canvas", "database", "write"},
-        description="Create or update a source snapshot node in a saved Context Canvas project.",
+        description="Create or update a source snapshot node in a saved Mindmap project.",
         annotations={"readOnlyHint": False, "idempotentHint": False, "openWorldHint": False},
     )
     def upsert_source_snapshot_node(
@@ -190,7 +191,7 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         tags: list[str] | None = None,
         node_id: str | None = None,
     ):
-        return canvas_store().upsert_source_snapshot(
+        return _tool_json(canvas_store().upsert_source_snapshot(
             project_id=project_id,
             title=title,
             source_type=source_type,
@@ -200,7 +201,7 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
             raw_text=raw_text,
             tags=tags,
             node_id=node_id,
-        )
+        ))
 
     @app.tool(
         name="summarize_canvas_nodes",
@@ -226,13 +227,13 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
     @app.resource(
         uri="info://server",
         name="ServerInfo",
-        description="Context Canvas MCP server summary.",
+        description="Mindmap MCP server summary.",
         mime_type="text/plain",
         tags=CORE_TAGS | {"configuration"},
     )
     def server_info() -> str:
         return (
-            "Context Canvas MCP v0.1.0\n"
+            "Mindmap MCP v0.1.0\n"
             "Primary tools: search_jira_issues, fetch_jira_issue, search_confluence_pages, "
             "fetch_confluence_page, fetch_figma_link_metadata, fetch_github_issue_or_pr, "
             "search_sources, list_canvas_projects, get_canvas_snapshot, get_canvas_context, "
@@ -241,12 +242,12 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
             "external source context for saved requirements canvases."
         )
 
-    @app.resource("context-canvas://projects", tags=CORE_TAGS | {"canvas", "database"})
+    @app.resource("mindmap://projects", tags=CORE_TAGS | {"canvas", "database"})
     def canvas_projects_resource() -> str:
         projects = canvas_store().list_projects(limit=50)
         return json.dumps([project.model_dump() for project in projects], ensure_ascii=False)
 
-    @app.resource("context-canvas://project/{project_id}/context", tags=CORE_TAGS | {"canvas", "database"})
+    @app.resource("mindmap://project/{project_id}/context", tags=CORE_TAGS | {"canvas", "database"})
     def canvas_project_context_resource(project_id: str) -> str:
         context = canvas_store().get_agent_context(project_id=project_id)
         if not context:
@@ -272,7 +273,7 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
     @app.prompt(tags=CORE_TAGS | {"prompt"}, description="Prompt for analyzing saved requirements context.")
     def analyze_requirements_canvas() -> str:
         return (
-            "Analyze the saved Context Canvas requirements. Focus on project contract, requirements, "
+            "Analyze the saved Mindmap requirements. Focus on project contract, requirements, "
             "source snapshots, and citation coverage."
         )
 
@@ -292,3 +293,17 @@ def _count_type(nodes: list[dict[str, Any]], canvas_type: str) -> int:
         if data.get("canvasType") == canvas_type:
             count += 1
     return count
+
+
+def _tool_json(value: Any) -> str:
+    return json.dumps(_jsonable(value), ensure_ascii=False)
+
+
+def _jsonable(value: Any) -> Any:
+    if isinstance(value, BaseModel):
+        return value.model_dump()
+    if isinstance(value, list):
+        return [_jsonable(item) for item in value]
+    if isinstance(value, dict):
+        return {str(key): _jsonable(item) for key, item in value.items()}
+    return value
