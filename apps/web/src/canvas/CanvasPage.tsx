@@ -46,6 +46,7 @@ import { ContextNode } from "./nodes/ContextNode";
 import { Button } from "../shared/ui/Button";
 import { createId } from "../shared/ids";
 import { nowIso } from "../shared/time";
+import { PROJECT_TEMPLATES } from "./projectTemplates";
 
 const nodeTypes = { contextNode: ContextNode };
 const AppLoading = lazy(() => import("../app/AppLoading").then((module) => ({ default: module.AppLoading })));
@@ -477,11 +478,40 @@ export function CanvasPage() {
     [fitView, loadProjectChats, setEdges, setNodes],
   );
 
-  const handleCreateProject = useCallback(async () => {
+  const handleCreateProject = useCallback(async (templateId?: string) => {
     setIsLoadingProject(true);
     try {
-      const name = `Mindmap ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
-      const snapshot = await createProject(name);
+      const template = templateId ? PROJECT_TEMPLATES.find((t) => t.id === templateId) : undefined;
+      const name = template?.defaultProjectName
+        ?? `Mindmap ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+      let snapshot = await createProject(name);
+
+      if (template) {
+        const now = nowIso();
+        const idMap = new Map(template.nodes.map((n) => [n.id, createId("node")]));
+        const nodes = template.nodes.map((n) => ({
+          ...n,
+          id: idMap.get(n.id)!,
+          data: { ...n.data, updatedAt: now },
+        }));
+        const edges = template.edges.map((e) => ({
+          ...e,
+          id: createId("edge"),
+          source: idMap.get(e.source)!,
+          target: idMap.get(e.target)!,
+          data: { relationship: e.data?.relationship ?? "", updatedAt: now },
+        }));
+        snapshot = await saveCanvas({
+          project: {
+            ...snapshot.project,
+            description: template.projectDescription,
+            viewport: template.viewport,
+          },
+          nodes,
+          edges,
+        });
+      }
+
       setProjects((prev) => [snapshot.project, ...prev]);
       setProject(snapshot.project);
       setNodes(snapshot.nodes);
@@ -542,7 +572,7 @@ export function CanvasPage() {
         projects={projects}
         isLoading={isLoadingProject}
         onSelectProject={(id) => void handleSelectProject(id)}
-        onCreateProject={() => void handleCreateProject()}
+        onCreateProject={(templateId) => void handleCreateProject(templateId)}
         onRenameProject={(id, name) => void handleRenameProject(id, name)}
         onDeleteProject={(id) => void handleDeleteProject(id)}
       />
