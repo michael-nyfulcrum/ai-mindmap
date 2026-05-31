@@ -1,25 +1,25 @@
-# Context Canvas
+# ai-mindmap
 
-A basic MVP for a human-controlled project context canvas. Users can create and connect requirement/source nodes, save the graph to SQLite, and ask questions against the saved canvas.
+ai-mindmap is the single source of truth that finally closes the gap between business intent and engineering execution. Teams map their entire project — contracts, requirements, decisions, and source references — onto a living, collaborative canvas that both humans and AI agents read from in real time. Every change is tracked, every decision is logged, and when requirements evolve the platform automatically surfaces exactly which parts of the project are impacted, so nothing slips through the cracks and no one is working off stale context. Business and tech stay locked in through a shared visual layer that replaces scattered docs, lost Slack threads, and tribal knowledge — and the built-in MCP server plugs directly into any AI coding assistant, giving developers autonomous, context-aware AI that actually understands the project rather than guessing from the codebase. The result is tighter alignment, faster iteration, and a team that ships with confidence because everyone — human and AI — is always working from the same ground truth.
 
-Current status: local MVP implemented and verified on 2026-05-26.
+## Live Demo
 
-## What Is Included
+**[https://7865420.xyz](https://7865420.xyz)**
 
-- Vite React app with ReactFlow canvas.
-- FastAPI app backed by SQLite.
-- Project, canvas, node, edge, upload, and analysis persistence.
-- Contract/requirement version history with audit metadata and affected-node flags.
-- Developer handoff prompt for Codex or other MCP-capable coding agents.
-- AI plan drafting for flagged nodes through the saved chat workflow.
-- AI analysis endpoint with citations.
-- OpenAI-backed AI analysis and chat. `OPENAI_API_KEY` is required.
-- FastMCP server for coding agents to read and update saved canvas context.
-- Backend e2e tests against the core frontend-facing API contract, including API restart persistence and DB-backed AI context.
-- Legacy local SQLite schema migration for the prior MVP table shapes.
-- Seeded `GGR-5534 Help Center Change Request` contract example.
+A seeded example project loads automatically on first visit. No login required.
 
-The product API and SQLite database are the system of record for saved canvas data. MCP can read/write saved canvas context for coding agents. External tooling such as Jira, Confluence, and Slack remains deferred from the current production-ready core gate.
+## What's Working
+
+- [x] Visual canvas — create and connect contracts, requirements, source references, notes, links, and images
+- [x] Project templates — start from a real-world example in one click
+- [x] Autosave — every canvas change persists to the database automatically
+- [x] Change tracking — full version history on contracts and requirements with before/after diffs
+- [x] AI impact analysis — when a requirement changes, only the genuinely affected nodes are flagged
+- [x] Impact badges — "Needs update", "Outdated", and "Conflict" surface directly on canvas nodes
+- [x] MCP server — any MCP-capable coding agent can read the full project context and write back changes
+- [x] AI chat — ask questions against the saved canvas and get cited answers
+- [x] Developer handoff panel — one-click MCP endpoint and setup instructions for coding agents
+- [x] Audit trail — every node change records who made it and when, including agent-originated writes
 
 ## Quick Start
 
@@ -122,6 +122,7 @@ packaging, and backup commands.
 
 ## Documentation
 
+- [Demo](docs/demo.md)
 - [Git workflow](docs/git-workflow.md)
 - [Product requirements](docs/product-requirements.md)
 - [Current product spec and progress tracker](docs/context-canvas-product-spec.md)
