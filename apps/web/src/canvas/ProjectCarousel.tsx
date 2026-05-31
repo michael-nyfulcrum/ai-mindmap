@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, HelpCircle, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import type { CanvasProject } from "./canvasTypes";
+import { TutorialDialog } from "./TutorialDialog";
 
 type ProjectCarouselProps = {
   projects: CanvasProject[];
@@ -38,18 +39,24 @@ export function ProjectCarousel({
   onDeleteProject,
 }: ProjectCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   function scroll(dir: "left" | "right") {
     scrollRef.current?.scrollBy({ left: dir === "left" ? -260 : 260, behavior: "smooth" });
   }
 
   return (
+    <>
     <main className="project-picker">
       <header className="project-picker-header">
         <h1 className="project-picker-title">
           <Sparkles size={22} />
-          Context Canvas
+          AI Mindmap
         </h1>
+        <button className="project-picker-help" onClick={() => setShowTutorial(true)}>
+          <HelpCircle size={15} />
+          How it works
+        </button>
         <button className="project-picker-cta" onClick={onCreateProject} disabled={isLoading}>
           <Plus size={16} />
           New Project
@@ -80,6 +87,8 @@ export function ProjectCarousel({
         </button>
       </div>
     </main>
+    {showTutorial ? <TutorialDialog onClose={() => setShowTutorial(false)} /> : null}
+    </>
   );
 }
 

@@ -22,7 +22,6 @@ Use this file as the first reference check before changing Context Canvas behavi
   - Use when implementation needs tool orchestration, handoffs, streaming, or traceable agent behavior.
 - OpenAI prompt-injection guidance: https://openai.com/index/designing-agents-to-resist-prompt-injection/
   - Use when adding source ingestion, external content analysis, or agent actions based on untrusted text.
-- Anthropic prompt engineering overview: https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview
   - Use for success criteria, empirical evaluation, clear/direct prompting, examples, role prompting, and long-context structure.
 - Google Cloud prompt engineering best practices: https://cloud.google.com/blog/products/application-development/five-best-practices-for-prompt-engineering
   - Use for model limitation awareness, specificity, context, examples, and prompt iteration practices.

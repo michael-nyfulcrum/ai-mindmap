@@ -60,7 +60,7 @@ export function CanvasAiPanel({
       <header className="chat-topbar">
         <div className="chat-title">
           <Bot size={17} />
-          <span>Chats</span>
+          <span>Chat</span>
         </div>
         <div className="chat-topbar-actions">
           <button type="button" onClick={onToggleCollapsed} aria-label="Collapse chats" title="Collapse chats">
@@ -77,7 +77,7 @@ export function CanvasAiPanel({
         {chats.length === 0 ? (
           <button type="button" className="chat-list-empty" onClick={onNewChat} disabled={isCreatingChat}>
             <Plus size={15} />
-            <span>Start a saved chat</span>
+            <span>New chat</span>
           </button>
         ) : (
           chats.map((chat) => {
@@ -122,12 +122,12 @@ export function CanvasAiPanel({
           {loadingChatId ? (
             <div className="chat-empty">
               <MessageSquareText size={22} />
-              <p>Loading saved chat...</p>
+              <p>Loading chat...</p>
             </div>
           ) : messages.length === 0 && !isSending ? (
             <div className="chat-empty">
               <MessageSquareText size={22} />
-              <p>{activeChatId ? "Ask about the saved requirements canvas." : "Create a chat or ask a question to save one."}</p>
+              <p>{activeChatId ? "Ask about the requirements and context in this project." : "Start a chat to ask questions about this project."}</p>
             </div>
           ) : (
             <>
@@ -165,7 +165,7 @@ export function CanvasAiPanel({
             value={question}
             rows={1}
             onChange={(event) => onQuestionChange(event.target.value)}
-            placeholder="Ask about this canvas..."
+            placeholder="Ask about this project..."
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
@@ -205,7 +205,7 @@ function ChatThinkingFallback() {
         </div>
         <div>
           <strong>Thinking</strong>
-          <span>Reading the saved canvas...</span>
+          <span>Reading project context...</span>
         </div>
       </div>
     </article>

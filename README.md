@@ -10,7 +10,7 @@ Current status: local MVP implemented and verified on 2026-05-26.
 - FastAPI app backed by SQLite.
 - Project, canvas, node, edge, upload, and analysis persistence.
 - Contract/requirement version history with audit metadata and affected-node flags.
-- Developer handoff prompt for Claude Code, Codex, or other MCP-capable coding agents.
+- Developer handoff prompt for Codex or other MCP-capable coding agents.
 - AI plan drafting for flagged nodes through the saved chat workflow.
 - AI analysis endpoint with citations.
 - OpenAI-backed AI analysis and chat. `OPENAI_API_KEY` is required.

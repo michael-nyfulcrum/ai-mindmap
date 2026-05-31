@@ -222,7 +222,7 @@ Experimental MCP resources:
 | User can create a new chat and reload prior chat messages. | Pass |
 | User can store and cite source snapshots manually in the saved canvas. | Pass |
 | Coding agents can read and update saved canvas context through MCP. | Pass |
-| Developer handoff gives Claude Code/Codex-ready project and MCP context. | Pass |
+| Developer handoff gives coding-agent-ready project and MCP context. | Pass |
 | Contract and requirement changes create audit/version history. | Pass |
 | Contract changes visibly flag affected nodes. | Pass |
 | Flagged nodes can ask AI for an update plan without automatic mutation. | Pass |

@@ -19,12 +19,12 @@ export function DeveloperHandoffPanel({ project, nodes, edges, onClose }: Develo
   const flaggedCount = nodes.filter((node) => node.data.impact).length;
 
   return (
-    <div className="handoff-backdrop" role="dialog" aria-modal="true" aria-label="Developer handoff">
+    <div className="handoff-backdrop" role="dialog" aria-modal="true" aria-label="Agent handoff">
       <Panel
-        title="Developer Handoff"
+        title="Agent Handoff"
         className="handoff-panel"
         actions={
-          <Button icon={<X size={15} />} variant="ghost" onClick={onClose} aria-label="Close developer handoff" title="Close developer handoff" />
+          <Button icon={<X size={15} />} variant="ghost" onClick={onClose} aria-label="Close agent handoff" title="Close agent handoff" />
         }
       >
         <div className="handoff-content">
@@ -66,14 +66,14 @@ function buildDeveloperPrompt(project: CanvasProject, nodes: CanvasFlowNode[], e
   const flagged = nodes.filter((node) => node.data.impact);
 
   return [
-    "Use Context Canvas as the source of truth before coding.",
+    "Use AI Mindmap as the source of truth before coding.",
     "",
     `Project ID: ${project.id}`,
     `Project name: ${project.name}`,
     `MCP endpoint: ${MCP_URL}`,
     "",
-    "In Claude Code, Codex, or another MCP-capable coding agent:",
-    "1. Connect the Context Canvas MCP server.",
+    "In Codex or another MCP-capable coding agent:",
+    "1. Connect the AI Mindmap MCP server.",
     "2. Call list_canvas_projects and select the project above.",
     "3. Call get_canvas_context with this project ID and your current implementation task.",
     "4. Treat project contract, requirement nodes, active impact flags, and recent contract changes as required context.",

@@ -57,8 +57,8 @@ export function CanvasPage() {
   const [isLoadingProject, setIsLoadingProject] = useState(false);
   const [project, setProject] = useState<CanvasProject>({
     id: "",
-    name: "Context Canvas",
-    description: "Loading project memory...",
+    name: "AI Mindmap",
+    description: "Loading workspace...",
     createdAt: nowIso(),
     updatedAt: nowIso(),
   });
@@ -482,7 +482,7 @@ export function CanvasPage() {
   const handleCreateProject = useCallback(async () => {
     setIsLoadingProject(true);
     try {
-      const name = `Canvas ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+      const name = `Mindmap ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
       const snapshot = await createProject(name);
       setProjects((prev) => [snapshot.project, ...prev]);
       setProject(snapshot.project);
@@ -532,7 +532,7 @@ export function CanvasPage() {
 
   if (isBooting) {
     return (
-      <Suspense fallback={<main className="app-loading" aria-label="Loading Context Canvas" />}>
+      <Suspense fallback={<main className="app-loading" aria-label="Loading AI Mindmap" />}>
         <AppLoading />
       </Suspense>
     );
@@ -574,7 +574,7 @@ export function CanvasPage() {
           <Circle size={10} fill="currentColor" />
           <span>{saveState === "loading" ? "Loading" : saveState === "saving" ? "Saving" : saveState === "error" ? "Save error" : "Saved to DB"}</span>
           <Button icon={<Code2 size={14} />} variant="ghost" onClick={() => setIsHandoffOpen(true)}>
-            Handoff
+            Agent Handoff
           </Button>
           <Button icon={<LayoutGrid size={14} />} variant="ghost" onClick={() => void handleBackToProjects()}>
             Projects

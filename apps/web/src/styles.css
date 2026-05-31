@@ -110,6 +110,7 @@ button:disabled {
 
 .app-loading h1 {
   margin: -18px 0 6px;
+  color: #111b2f;
   font-size: 20px;
   line-height: 1.1;
 }
@@ -1616,6 +1617,31 @@ button:disabled {
   transform: translateY(-1px);
 }
 
+.project-picker-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 8px;
+  background: transparent;
+  color: rgb(255 255 255 / 72%);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+  white-space: nowrap;
+}
+
+.project-picker-help:hover {
+  background: rgb(255 255 255 / 8%);
+  border-color: rgb(255 255 255 / 40%);
+  color: #ffffff;
+}
+
 .project-carousel-wrapper {
   display: flex;
   flex-direction: row;
@@ -1856,6 +1882,148 @@ button:disabled {
     justify-content: flex-start;
     overflow-x: auto;
   }
+}
+
+/* ── Tutorial Dialog ──────────────────────────────────────────────── */
+
+.tutorial-backdrop {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(5 10 22 / 64%);
+  backdrop-filter: blur(6px);
+  animation: fade-in 180ms ease both;
+}
+
+.tutorial-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  border: 1px solid #d4deea;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow:
+    0 24px 64px rgb(5 10 22 / 36%),
+    0 4px 16px rgb(5 10 22 / 16%);
+  animation: slide-up 220ms ease both;
+}
+
+.tutorial-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid #e8edf4;
+}
+
+.tutorial-header h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 750;
+  color: #111b2f;
+}
+
+.tutorial-header button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e0e7ef;
+  border-radius: 8px;
+  background: transparent;
+  color: #607086;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.tutorial-header button:hover {
+  background: #f3f6fa;
+  color: #17212f;
+}
+
+.tutorial-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 8px 0;
+  list-style: none;
+}
+
+.tutorial-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f0f4f8;
+}
+
+.tutorial-step:last-child {
+  border-bottom: none;
+}
+
+.tutorial-step-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #eef5ff;
+  color: #1f6feb;
+  margin-top: 1px;
+}
+
+.tutorial-step strong {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #17212f;
+}
+
+.tutorial-step p {
+  margin: 0;
+  font-size: 12.5px;
+  color: #556070;
+  line-height: 1.45;
+}
+
+.tutorial-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 20px;
+  border-top: 1px solid #e8edf4;
+}
+
+.tutorial-footer button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 22px;
+  border: none;
+  border-radius: 8px;
+  background: #1f6feb;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgb(31 111 235 / 30%);
+  transition:
+    background-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.tutorial-footer button:hover {
+  background: #2479ff;
+  box-shadow: 0 6px 20px rgb(31 111 235 / 44%);
+  transform: translateY(-1px);
 }
 
 @media (prefers-reduced-motion: reduce) {

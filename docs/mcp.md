@@ -22,7 +22,7 @@ services/api/context-canvas.sqlite
 
 ## Coding Agent Workflow
 
-Agents such as Codex or Claude should:
+MCP-capable coding agents should:
 
 1. Call `list_canvas_projects` to find the relevant project.
 2. Call `get_canvas_context` with the project ID and current task.
