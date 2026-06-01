@@ -137,7 +137,7 @@ def create_app(
 
     @app.patch("/api/projects/{project_id}")
     async def patch_project(project_id: str, request: Request, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
-        project = db.patch_project(project_id, await request.json())
+        project = db.patch_project(project_id, await _json_object(request))
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
         return project.model_dump()
@@ -162,14 +162,14 @@ def create_app(
 
     @app.post("/api/projects/{project_id}/nodes")
     async def create_node(project_id: str, request: Request, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
-        node = db.create_node(project_id, await request.json(), actor=_actor(request))
+        node = db.create_node(project_id, await _json_object(request), actor=_actor(request))
         if not node:
             raise HTTPException(status_code=404, detail="Project not found")
         return node
 
     @app.patch("/api/projects/{project_id}/nodes/{node_id}")
     async def patch_node(project_id: str, node_id: str, request: Request, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
-        node = db.patch_node(project_id, node_id, await request.json(), actor=_actor(request))
+        node = db.patch_node(project_id, node_id, await _json_object(request), actor=_actor(request))
         if not node:
             raise HTTPException(status_code=404, detail="Node not found")
         return node
@@ -194,7 +194,7 @@ def create_app(
     @app.post("/api/projects/{project_id}/edges")
     async def create_edge(project_id: str, request: Request, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
         try:
-            edge = db.create_edge(project_id, await request.json())
+            edge = db.create_edge(project_id, await _json_object(request))
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         if not edge:
@@ -203,7 +203,7 @@ def create_app(
 
     @app.patch("/api/projects/{project_id}/edges/{edge_id}")
     async def patch_edge(project_id: str, edge_id: str, request: Request, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
-        edge = db.patch_edge(project_id, edge_id, await request.json())
+        edge = db.patch_edge(project_id, edge_id, await _json_object(request))
         if not edge:
             raise HTTPException(status_code=404, detail="Edge not found")
         return edge
@@ -220,17 +220,12 @@ def create_app(
         resolved_upload_dir = request.app.state.upload_dir or _upload_dir()
         resolved_upload_dir.mkdir(parents=True, exist_ok=True)
         try:
-            header, encoded = payload.dataUrl.split(",", 1)
-            if not header.startswith("data:"):
-                raise ValueError("Invalid data URL header")
-            data = base64.b64decode(encoded, validate=True)
+            data = _decode_data_url(payload.dataUrl)
         except Exception as exc:
             raise HTTPException(status_code=400, detail="Invalid data URL") from exc
-        configured_max_upload_bytes = request.app.state.max_upload_bytes or 10 * 1024 * 1024
-        if len(data) > configured_max_upload_bytes:
+        if len(data) > _max_upload_bytes(request):
             raise HTTPException(status_code=413, detail="Upload is too large")
-        safe_name = "".join(char if char.isalnum() or char in "._-" else "_" for char in payload.filename)
-        file_path = resolved_upload_dir / f"{utc_now().replace(':', '-')}-{safe_name}"
+        file_path = resolved_upload_dir / f"{utc_now().replace(':', '-')}-{_safe_upload_filename(payload.filename)}"
         file_path.write_bytes(data)
         upload = db.save_upload(payload.projectId, payload.filename, payload.contentType, file_path)
         return upload
@@ -246,14 +241,14 @@ def create_app(
 
     @app.post("/api/sources/fetch")
     async def fetch_source_endpoint(request: Request) -> dict[str, Any]:
-        payload = await request.json()
+        payload = await _json_object(request)
         if "sourceType" not in payload and payload.get("url"):
             payload["sourceType"] = infer_source_type(str(payload["url"]))
         return fetch_source(payload)
 
     @app.post("/api/sources/search")
     async def search_sources_endpoint(request: Request) -> dict[str, Any]:
-        return search_source_context(await request.json())
+        return search_source_context(await _json_object(request))
 
     @app.post("/api/projects/{project_id}/analyze")
     def analyze(project_id: str, payload: AnalyzeRequest, request: Request, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
@@ -336,6 +331,31 @@ def _db(request: Request) -> AppDatabase:
 def _actor(request: Request) -> str:
     actor = request.headers.get("x-context-canvas-actor", "").strip()
     return actor[:120] or "local user"
+
+
+async def _json_object(request: Request) -> dict[str, Any]:
+    try:
+        payload = await request.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid JSON body") from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="JSON body must be an object")
+    return payload
+
+
+def _decode_data_url(data_url: str) -> bytes:
+    header, encoded = data_url.split(",", 1)
+    if not header.startswith("data:"):
+        raise ValueError("Invalid data URL header")
+    return base64.b64decode(encoded, validate=True)
+
+
+def _max_upload_bytes(request: Request) -> int:
+    return request.app.state.max_upload_bytes or 10 * 1024 * 1024
+
+
+def _safe_upload_filename(filename: str) -> str:
+    return "".join(char if char.isalnum() or char in "._-" else "_" for char in filename)
 
 
 def _cors_origins() -> list[str]:

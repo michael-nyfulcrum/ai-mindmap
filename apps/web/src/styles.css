@@ -1,4 +1,23 @@
 :root {
+  /* Design tokens */
+  --c-blue: #1f6feb;
+  --c-blue-light: #2479ff;
+  --c-pink: #bf3989;
+  --c-teal: #0a7f8f;
+  --c-green: #238636;
+  --c-purple: #7b3fe4;
+  --c-gold: #e6a72e;
+  --c-red: #d94f4f;
+  --bg-base: #060b18;
+  --bg-deep: #0b1528;
+  --bg-panel: rgb(7 12 24 / 94%);
+  --text-1: #e8edf5;
+  --text-2: #dde5f0;
+  --text-muted: rgb(255 255 255 / 48%);
+  --text-faint: rgb(255 255 255 / 32%);
+  --border-faint: rgb(255 255 255 / 7%);
+  --border-subtle: rgb(255 255 255 / 10%);
+
   color: #dde5f0;
   background: #060b18;
   font-family:
@@ -6,6 +25,11 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid rgb(31 111 235 / 65%);
+  outline-offset: 2px;
 }
 
 * {
@@ -46,9 +70,10 @@ button:disabled {
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(circle at 50% 38%, rgb(10 127 143 / 22%), transparent 32%),
-    radial-gradient(circle at 47% 44%, rgb(31 111 235 / 18%), transparent 38%),
-    radial-gradient(circle at 72% 64%, rgb(191 57 137 / 14%), transparent 30%),
+    radial-gradient(circle at 50% 38%, rgb(10 127 143 / 28%), transparent 32%),
+    radial-gradient(circle at 47% 44%, rgb(31 111 235 / 24%), transparent 38%),
+    radial-gradient(circle at 72% 64%, rgb(191 57 137 / 20%), transparent 30%),
+    radial-gradient(circle at 28% 62%, rgb(123 63 228 / 16%), transparent 28%),
     linear-gradient(160deg, #060b18 0%, #0b1528 100%);
   color: #dde5f0;
   animation: fade-in 300ms ease both;
@@ -56,9 +81,9 @@ button:disabled {
 
 .app-loading-animation {
   position: relative;
-  width: min(230px, 58vw);
-  height: min(230px, 58vw);
-  filter: drop-shadow(0 22px 48px rgb(31 111 235 / 32%));
+  width: min(260px, 60vw);
+  height: min(260px, 60vw);
+  filter: drop-shadow(0 22px 48px rgb(31 111 235 / 40%));
 }
 
 .app-loading-ai-badge {
@@ -66,19 +91,19 @@ button:disabled {
   top: 50%;
   left: 50%;
   display: grid;
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
   place-items: center;
-  border: 1px solid rgb(255 255 255 / 14%);
-  border-radius: 18px;
-  background: linear-gradient(145deg, #0f1c38, #1f6feb);
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 20px;
+  background: linear-gradient(145deg, #0d1a34, #1f6feb 60%, #7b3fe4);
   box-shadow:
-    0 0 0 1px rgb(31 111 235 / 30%),
-    0 18px 40px rgb(31 111 235 / 36%),
-    0 0 60px rgb(31 111 235 / 20%),
-    inset 0 1px 0 rgb(255 255 255 / 18%);
+    0 0 0 1px rgb(31 111 235 / 35%),
+    0 18px 40px rgb(31 111 235 / 44%),
+    0 0 80px rgb(31 111 235 / 28%),
+    inset 0 1px 0 rgb(255 255 255 / 22%);
   color: #ffffff;
-  font-size: 21px;
+  font-size: 22px;
   font-weight: 900;
   transform: translate(-50%, -50%);
   animation: ai-core-pulse 2000ms ease-in-out infinite;
@@ -87,35 +112,55 @@ button:disabled {
 .app-loading-node {
   position: absolute;
   display: block;
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
   border-radius: 999px;
   background: #0a7f8f;
   box-shadow:
-    0 0 0 6px rgb(10 127 143 / 12%),
-    0 0 20px rgb(10 127 143 / 40%);
+    0 0 0 7px rgb(10 127 143 / 14%),
+    0 0 24px rgb(10 127 143 / 50%);
   animation: neural-pulse 1800ms ease-in-out infinite;
 }
 
 .app-loading-node-one {
-  top: 25%;
-  left: 28%;
+  top: 22%;
+  left: 26%;
 }
 
 .app-loading-node-two {
-  top: 30%;
-  right: 24%;
+  top: 26%;
+  right: 22%;
   animation-delay: 360ms;
 }
 
 .app-loading-node-three {
-  right: 32%;
-  bottom: 22%;
+  right: 28%;
+  bottom: 20%;
   background: #238636;
   box-shadow:
-    0 0 0 6px rgb(35 134 54 / 12%),
-    0 0 20px rgb(35 134 54 / 36%);
+    0 0 0 7px rgb(35 134 54 / 14%),
+    0 0 24px rgb(35 134 54 / 46%);
   animation-delay: 720ms;
+}
+
+.app-loading-node-four {
+  left: 28%;
+  bottom: 22%;
+  background: #7b3fe4;
+  box-shadow:
+    0 0 0 7px rgb(123 63 228 / 14%),
+    0 0 24px rgb(123 63 228 / 46%);
+  animation-delay: 1080ms;
+}
+
+.app-loading-node-five {
+  top: 50%;
+  right: 14%;
+  background: #bf3989;
+  box-shadow:
+    0 0 0 7px rgb(191 57 137 / 14%),
+    0 0 24px rgb(191 57 137 / 46%);
+  animation-delay: 1440ms;
 }
 
 .app-loading h1 {
@@ -150,9 +195,10 @@ button:disabled {
     "chat flow inspector"
     "toolbar toolbar toolbar";
   background:
-    radial-gradient(circle at 22% 24%, rgb(31 111 235 / 12%), transparent 30%),
-    radial-gradient(circle at 76% 18%, rgb(191 57 137 / 9%), transparent 32%),
-    radial-gradient(circle at 58% 82%, rgb(10 127 143 / 10%), transparent 34%),
+    radial-gradient(circle at 22% 24%, rgb(31 111 235 / 22%), transparent 30%),
+    radial-gradient(circle at 76% 18%, rgb(191 57 137 / 17%), transparent 32%),
+    radial-gradient(circle at 58% 82%, rgb(10 127 143 / 16%), transparent 34%),
+    radial-gradient(ellipse at 52% 46%, rgb(123 63 228 / 10%), transparent 56%),
     #060b18;
   animation: fade-in 240ms ease both;
   transition: grid-template-columns 260ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -163,13 +209,15 @@ button:disabled {
   z-index: 0;
   inset: -18%;
   background:
-    radial-gradient(circle at 18% 30%, rgb(255 95 206 / 10%), transparent 28%),
-    radial-gradient(circle at 74% 38%, rgb(69 220 255 / 12%), transparent 32%),
-    radial-gradient(circle at 52% 72%, rgb(126 87 255 / 8%), transparent 34%);
+    radial-gradient(circle at 18% 30%, rgb(255 95 206 / 26%), transparent 28%),
+    radial-gradient(circle at 74% 38%, rgb(69 220 255 / 28%), transparent 32%),
+    radial-gradient(circle at 52% 72%, rgb(126 87 255 / 22%), transparent 34%),
+    radial-gradient(circle at 36% 58%, rgb(31 111 235 / 18%), transparent 26%);
   content: "";
-  filter: blur(24px);
-  opacity: 0.7;
+  filter: blur(32px);
+  opacity: 0.9;
   pointer-events: none;
+  will-change: transform;
   animation: shell-lava-drift 16s ease-in-out infinite alternate;
 }
 
@@ -199,9 +247,11 @@ button:disabled {
   justify-content: space-between;
   gap: 16px;
   padding: 0 16px;
-  border-bottom: 1px solid rgb(255 255 255 / 7%);
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
   background: rgb(6 11 24 / 88%);
-  box-shadow: 0 8px 28px rgb(0 0 0 / 30%);
+  box-shadow:
+    0 8px 28px rgb(0 0 0 / 30%),
+    0 1px 0 rgb(31 111 235 / 12%);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
 }
@@ -219,8 +269,8 @@ button:disabled {
 }
 
 .topbar h1 svg {
-  color: #bf3989;
-  filter: drop-shadow(0 0 10px rgb(191 57 137 / 60%));
+  color: #e060b0;
+  filter: drop-shadow(0 0 12px rgb(191 57 137 / 70%)) drop-shadow(0 0 4px rgb(31 111 235 / 30%));
   animation: sparkle-spin 4s linear infinite;
 }
 
@@ -351,6 +401,56 @@ button:disabled {
   gap: 6px;
 }
 
+.toolbar-sep {
+  width: 1px;
+  height: 22px;
+  background: rgb(255 255 255 / 10%);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+.icon-button.toolbar-node-btn-project_contract {
+  color: rgb(31 111 235 / 60%);
+}
+
+.icon-button.toolbar-node-btn-project_contract:hover {
+  color: #5aabff;
+  border-color: rgb(31 111 235 / 28%);
+  background: rgb(31 111 235 / 12%);
+}
+
+.icon-button.toolbar-node-btn-requirement {
+  color: rgb(35 134 54 / 60%);
+}
+
+.icon-button.toolbar-node-btn-requirement:hover {
+  color: #4ac26b;
+  border-color: rgb(35 134 54 / 28%);
+  background: rgb(35 134 54 / 12%);
+}
+
+.icon-button.toolbar-node-btn-source_snapshot,
+.icon-button.toolbar-node-btn-link {
+  color: rgb(10 127 143 / 60%);
+}
+
+.icon-button.toolbar-node-btn-source_snapshot:hover,
+.icon-button.toolbar-node-btn-link:hover {
+  color: #22d3ee;
+  border-color: rgb(10 127 143 / 28%);
+  background: rgb(10 127 143 / 12%);
+}
+
+.icon-button.toolbar-node-btn-image {
+  color: rgb(191 57 137 / 60%);
+}
+
+.icon-button.toolbar-node-btn-image:hover {
+  color: #e879ae;
+  border-color: rgb(191 57 137 / 28%);
+  background: rgb(191 57 137 / 12%);
+}
+
 /* ── Flow Canvas ─────────────────────────────────────────────────────── */
 
 .flow-region {
@@ -361,8 +461,9 @@ button:disabled {
   overflow: hidden;
   border-inline: 1px solid rgb(255 255 255 / 6%);
   background:
-    radial-gradient(circle at 18% 24%, rgb(69 220 255 / 10%), transparent 26%),
-    radial-gradient(circle at 76% 20%, rgb(174 89 255 / 9%), transparent 30%),
+    radial-gradient(circle at 18% 24%, rgb(69 220 255 / 20%), transparent 26%),
+    radial-gradient(circle at 76% 20%, rgb(174 89 255 / 18%), transparent 30%),
+    radial-gradient(circle at 42% 64%, rgb(255 95 206 / 12%), transparent 28%),
     radial-gradient(ellipse at 62% 68%, rgb(0 0 0 / 40%), transparent 48%),
     linear-gradient(135deg, #050a19 0%, #0b1730 48%, #071024 100%);
 }
@@ -395,30 +496,150 @@ button:disabled {
 
 .galaxy-background-fallback {
   background:
-    radial-gradient(circle at 20% 32%, rgb(255 255 255 / 12%) 0 1px, transparent 2px),
-    radial-gradient(circle at 74% 24%, rgb(255 255 255 / 8%) 0 1px, transparent 2px),
-    radial-gradient(circle at 42% 76%, rgb(255 255 255 / 9%) 0 1px, transparent 2px),
+    radial-gradient(circle at 7% 11%, rgb(255 255 255 / 22%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 16% 44%, rgb(200 220 255 / 18%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 28% 23%, rgb(255 255 255 / 20%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 38% 67%, rgb(180 160 255 / 16%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 47% 14%, rgb(255 255 255 / 22%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 55% 38%, rgb(100 200 255 / 18%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 63% 82%, rgb(255 255 255 / 16%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 72% 28%, rgb(255 255 255 / 20%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 81% 54%, rgb(200 180 255 / 18%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 89% 18%, rgb(255 255 255 / 22%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 94% 72%, rgb(255 255 255 / 16%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 42% 76%, rgb(255 255 255 / 18%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 20% 32%, rgb(255 255 255 / 14%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 74% 24%, rgb(255 255 255 / 16%) 0 1px, transparent 1.5px),
     radial-gradient(ellipse at 64% 68%, rgb(0 0 0 / 52%), transparent 44%),
-    radial-gradient(circle at 28% 36%, rgb(67 211 255 / 14%), transparent 26%),
-    radial-gradient(circle at 78% 44%, rgb(178 92 255 / 11%), transparent 30%),
-    radial-gradient(circle at 54% 78%, rgb(255 92 203 / 7%), transparent 32%);
+    radial-gradient(circle at 28% 36%, rgb(67 211 255 / 22%), transparent 26%),
+    radial-gradient(circle at 78% 44%, rgb(178 92 255 / 20%), transparent 30%),
+    radial-gradient(circle at 54% 78%, rgb(255 92 203 / 14%), transparent 32%);
   filter: blur(0.2px);
-  opacity: 0.52;
-  animation: galaxy-fallback-drift 20s ease-in-out infinite alternate;
+  opacity: 0.72;
+  will-change: transform, opacity;
+  animation:
+    galaxy-fallback-drift 20s ease-in-out infinite alternate,
+    nebula-drift 8s ease-in-out infinite;
 }
 
 .galaxy-background::after {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 62% 66%, rgb(0 0 0 / 18%) 0%, transparent 40%),
-    radial-gradient(ellipse at center, transparent 0%, rgb(3 6 17 / 12%) 50%, rgb(3 6 17 / 40%) 100%),
-    linear-gradient(180deg, rgb(255 255 255 / 2%), transparent 36%, rgb(0 0 0 / 14%));
+    radial-gradient(ellipse at center, transparent 0%, rgb(3 6 17 / 8%) 50%, rgb(3 6 17 / 28%) 100%),
+    linear-gradient(180deg, rgb(255 255 255 / 2%), transparent 36%, rgb(0 0 0 / 8%));
   content: "";
 }
 
 .react-flow__background {
-  opacity: 0.28;
+  opacity: 0.36;
+}
+
+.react-flow__edge-path {
+  stroke: rgb(100 166 248 / 50%);
+  stroke-width: 1.5;
+  transition: stroke 160ms ease;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: rgb(31 111 235 / 90%);
+  filter: drop-shadow(0 0 5px rgb(31 111 235 / 50%));
+}
+
+.react-flow__edge-textbg {
+  fill: rgb(6 11 23 / 80%);
+}
+
+.react-flow__edge-text {
+  fill: rgb(255 255 255 / 42%);
+  font-size: 11px;
+}
+
+.react-flow__controls {
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 10px;
+  background: rgb(6 11 23 / 90%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 4%),
+    0 8px 24px rgb(0 0 0 / 40%);
+  overflow: hidden;
+}
+
+.react-flow__controls-button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 0;
+  background: transparent;
+  color: rgb(255 255 255 / 48%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+  cursor: pointer;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: 0;
+}
+
+.react-flow__controls-button:hover {
+  background: rgb(255 255 255 / 8%);
+  color: #e8edf5;
+}
+
+.react-flow__controls-button svg {
+  fill: currentColor;
+  width: 13px;
+  height: 13px;
+  max-width: 13px;
+  max-height: 13px;
+}
+
+.react-flow__handle {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid rgb(255 255 255 / 36%);
+  background: #1f6feb;
+  border-radius: 999px;
+  opacity: 0;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.context-node:hover .react-flow__handle,
+.context-node.is-active .react-flow__handle {
+  opacity: 1;
+}
+
+.react-flow__handle-connecting {
+  background: #e6a72e;
+  border-color: rgb(255 255 255 / 60%);
+}
+
+.react-flow__handle:hover {
+  transform: scale(1.5);
+  border-color: rgb(255 255 255 / 70%);
+}
+
+.react-flow__nodesselection-rect {
+  border: 1px solid rgb(31 111 235 / 50%);
+  border-radius: 4px;
+  background: rgb(31 111 235 / 6%);
+}
+
+.react-flow__selection {
+  border: 1px solid rgb(31 111 235 / 50%);
+  border-radius: 4px;
+  background: rgb(31 111 235 / 6%);
 }
 
 /* ── Side Panels ─────────────────────────────────────────────────────── */
@@ -861,10 +1082,11 @@ button:disabled {
 }
 
 .context-node:hover {
-  transform: translateY(-5px) scale(1.015);
+  transform: translateY(-6px) scale(1.018);
   box-shadow:
-    0 24px 56px rgb(0 0 0 / 46%),
-    0 8px 20px rgb(0 0 0 / 26%),
+    0 28px 64px rgb(0 0 0 / 52%),
+    0 8px 20px rgb(0 0 0 / 28%),
+    0 0 0 1px rgb(255 255 255 / 18%),
     inset 0 1px 0 rgb(255 255 255 / 80%);
 }
 
@@ -878,9 +1100,11 @@ button:disabled {
 .context-node.is-active {
   border-color: #1f6feb;
   box-shadow:
-    0 0 0 2px rgb(31 111 235 / 24%),
-    0 0 40px rgb(31 111 235 / 30%),
-    0 20px 40px rgb(0 0 0 / 40%);
+    0 0 0 2px rgb(31 111 235 / 30%),
+    0 0 48px rgb(31 111 235 / 36%),
+    0 0 16px rgb(31 111 235 / 20%),
+    0 20px 40px rgb(0 0 0 / 40%),
+    inset 0 1px 0 rgb(255 255 255 / 80%);
 }
 
 .context-node.is-highlighted {
@@ -922,6 +1146,35 @@ button:disabled {
   border-top-color: #bf3989;
 }
 
+.context-node::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  border-radius: 6px 6px 0 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.context-node-project_contract::after {
+  background: linear-gradient(180deg, rgb(31 111 235 / 13%), transparent);
+}
+
+.context-node-requirement::after {
+  background: linear-gradient(180deg, rgb(35 134 54 / 13%), transparent);
+}
+
+.context-node-link::after,
+.context-node-source_snapshot::after {
+  background: linear-gradient(180deg, rgb(10 127 143 / 13%), transparent);
+}
+
+.context-node-image::after {
+  background: linear-gradient(180deg, rgb(191 57 137 / 13%), transparent);
+}
+
 .context-node-header {
   display: grid;
   grid-template-columns: 30px 1fr;
@@ -943,6 +1196,25 @@ button:disabled {
   background: linear-gradient(145deg, #eef6ff, #f5faff);
   color: #1f6feb;
   box-shadow: 0 6px 14px rgb(31 111 235 / 18%);
+}
+
+.context-node-requirement .context-node-icon {
+  background: linear-gradient(145deg, #edfbf0, #d1f7e0);
+  color: #238636;
+  box-shadow: 0 6px 14px rgb(35 134 54 / 22%);
+}
+
+.context-node-link .context-node-icon,
+.context-node-source_snapshot .context-node-icon {
+  background: linear-gradient(145deg, #e4f6f8, #c8edf2);
+  color: #0a7f8f;
+  box-shadow: 0 6px 14px rgb(10 127 143 / 22%);
+}
+
+.context-node-image .context-node-icon {
+  background: linear-gradient(145deg, #fce6f2, #f8cce8);
+  color: #bf3989;
+  box-shadow: 0 6px 14px rgb(191 57 137 / 22%);
 }
 
 .context-node-kicker {
@@ -1660,18 +1932,19 @@ button:disabled {
   100% {
     transform: translate(-50%, -50%) scale(1);
     box-shadow:
-      0 0 0 1px rgb(31 111 235 / 30%),
-      0 18px 40px rgb(31 111 235 / 36%),
-      0 0 60px rgb(31 111 235 / 20%),
-      inset 0 1px 0 rgb(255 255 255 / 18%);
+      0 0 0 1px rgb(31 111 235 / 35%),
+      0 18px 40px rgb(31 111 235 / 44%),
+      0 0 80px rgb(31 111 235 / 28%),
+      inset 0 1px 0 rgb(255 255 255 / 22%);
   }
   50% {
-    transform: translate(-50%, -50%) scale(1.1);
+    transform: translate(-50%, -50%) scale(1.12);
     box-shadow:
-      0 0 0 1px rgb(31 111 235 / 50%),
-      0 22px 50px rgb(31 111 235 / 52%),
-      0 0 80px rgb(31 111 235 / 32%),
-      inset 0 1px 0 rgb(255 255 255 / 24%);
+      0 0 0 2px rgb(31 111 235 / 60%),
+      0 22px 56px rgb(31 111 235 / 60%),
+      0 0 100px rgb(31 111 235 / 40%),
+      0 0 40px rgb(123 63 228 / 20%),
+      inset 0 1px 0 rgb(255 255 255 / 28%);
   }
 }
 
@@ -1687,6 +1960,18 @@ button:disabled {
   }
 }
 
+@keyframes nebula-drift {
+  0%,
+  100% {
+    opacity: 0.65;
+    filter: blur(0.2px) brightness(1);
+  }
+  50% {
+    opacity: 0.82;
+    filter: blur(0.2px) brightness(1.12);
+  }
+}
+
 /* ── Project Picker ──────────────────────────────────────────────────── */
 
 .project-picker {
@@ -1697,11 +1982,17 @@ button:disabled {
   height: 100vh;
   overflow: hidden;
   background:
-    radial-gradient(circle at 18% 22%, rgb(31 111 235 / 18%), transparent 32%),
-    radial-gradient(circle at 80% 16%, rgb(191 57 137 / 14%), transparent 28%),
-    radial-gradient(circle at 52% 80%, rgb(10 127 143 / 12%), transparent 34%),
+    radial-gradient(circle at 18% 22%, rgb(31 111 235 / 24%), transparent 32%),
+    radial-gradient(circle at 80% 16%, rgb(191 57 137 / 20%), transparent 28%),
+    radial-gradient(circle at 52% 80%, rgb(10 127 143 / 18%), transparent 34%),
+    radial-gradient(ellipse at 50% 50%, rgb(123 63 228 / 10%), transparent 60%),
     linear-gradient(160deg, #060b18 0%, #0b1528 60%, #060f1e 100%);
   animation: fade-in 240ms ease both;
+}
+
+.project-picker > * {
+  position: relative;
+  z-index: 1;
 }
 
 .project-picker-header {
@@ -1728,8 +2019,8 @@ button:disabled {
 }
 
 .project-picker-title svg {
-  color: #bf3989;
-  filter: drop-shadow(0 0 12px rgb(191 57 137 / 65%));
+  color: #e060b0;
+  filter: drop-shadow(0 0 16px rgb(191 57 137 / 75%)) drop-shadow(0 0 6px rgb(31 111 235 / 30%));
   animation: sparkle-spin 4s linear infinite;
 }
 

@@ -66,6 +66,9 @@ export function ProjectCarousel({
   return (
     <>
       <main className="project-picker" aria-busy={isLoading}>
+        <div className="galaxy-background" aria-hidden="true">
+          <div className="galaxy-background-fallback" />
+        </div>
         <header className="project-picker-header">
           <div>
             <h1 className="project-picker-title">

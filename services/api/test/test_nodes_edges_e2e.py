@@ -21,6 +21,18 @@ class NodeAndEdgeE2ETest(ApiE2ECase):
         )
         self.assertEqual(invalid_edge.status_code, 400)
 
+        non_object_node = self.client.post(f"/api/projects/{project_id}/nodes", json=[])
+        self.assertEqual(non_object_node.status_code, 400)
+        self.assertEqual(non_object_node.json()["detail"], "JSON body must be an object")
+
+        malformed_node = self.client.post(
+            f"/api/projects/{project_id}/nodes",
+            content="{",
+            headers={"content-type": "application/json"},
+        )
+        self.assertEqual(malformed_node.status_code, 400)
+        self.assertEqual(malformed_node.json()["detail"], "Invalid JSON body")
+
         patched_node = self.client.patch(
             f"/api/projects/{project_id}/nodes/node_b",
             json={"data": {"title": "Updated requirement", "fields": {"content": "Updated requirement detail"}}},

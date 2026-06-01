@@ -1,7 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   addEdge,
-  Background,
   Controls,
   ReactFlow,
   useEdgesState,
@@ -112,7 +111,6 @@ export function CanvasPage() {
     setMessages(active.messages);
   }, []);
 
-  // On mount: load project list and show the picker
   useEffect(() => {
     let cancelled = false;
 
@@ -454,8 +452,6 @@ export function CanvasPage() {
     [highlightCitations, nodes, setCenter],
   );
 
-  // --- Project picker handlers ---
-
   const handleSelectProject = useCallback(
     async (selectedProjectId: string) => {
       setIsLoadingProject(true);
@@ -557,6 +553,16 @@ export function CanvasPage() {
     setShowProjectPicker(true);
   }, [persist, project.id]);
 
+  const handleLoadDemo = useCallback(async () => {
+    const loaded = await listProjects();
+    const snapshot = await loadCanvas(loaded.projects[0].id);
+    setProject(snapshot.project);
+    setNodes(snapshot.nodes);
+    setEdges(snapshot.edges);
+    await loadProjectChats(snapshot.project.id);
+    window.requestAnimationFrame(() => fitView({ padding: 0.18 }));
+  }, [fitView, loadProjectChats, setEdges, setNodes]);
+
   if (isBooting) {
     return (
       <Suspense fallback={<main className="app-loading" aria-label="Loading AI Mindmap" />}>
@@ -619,6 +625,9 @@ export function CanvasPage() {
       </header>
 
       <section className="flow-region">
+        <div className="galaxy-background" aria-hidden="true">
+          <div className="galaxy-background-fallback" />
+        </div>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -634,7 +643,6 @@ export function CanvasPage() {
           deleteKeyCode={null}
           multiSelectionKeyCode={["Meta", "Shift"]}
         >
-          <Background gap={34} size={1} color="rgb(255 255 255 / 20%)" />
           <Controls showInteractive={false} />
         </ReactFlow>
       </section>
@@ -681,17 +689,7 @@ export function CanvasPage() {
         onAddNode={handleAddNode}
         onFitView={() => fitView({ padding: 0.18 })}
         onSave={() => void persist()}
-        onLoadDemo={() => {
-          void listProjects()
-            .then((projects) => loadCanvas(projects.projects[0].id))
-            .then((snapshot) => {
-              setProject(snapshot.project);
-              setNodes(snapshot.nodes);
-              setEdges(snapshot.edges);
-              void loadProjectChats(snapshot.project.id);
-              window.requestAnimationFrame(() => fitView({ padding: 0.18 }));
-            });
-        }}
+        onLoadDemo={() => void handleLoadDemo()}
         onDeleteItems={deleteActiveItems}
         activeItemCount={activeNodeIds.length + activeEdgeIds.length}
       />

@@ -33,11 +33,36 @@ class UploadAnalysisChatE2ETest(ApiE2ECase):
         self.assertIsInstance(stored_path, str)
         self.assertTrue(str(stored_path).endswith(".._note.txt"))
 
+        odd_filename = self.client.post(
+            "/api/uploads",
+            json={
+                "projectId": project_id,
+                "filename": "folder / odd name?.txt",
+                "contentType": "text/plain",
+                "dataUrl": data_url,
+            },
+        )
+        self.assertEqual(odd_filename.status_code, 200)
+        odd_path = self.sqlite_scalar("SELECT file_path FROM uploads WHERE id = ?", (odd_filename.json()["id"],))
+        self.assertIsInstance(odd_path, str)
+        self.assertTrue(str(odd_path).endswith("folder___odd_name_.txt"))
+
         invalid_data_url = self.client.post(
             "/api/uploads",
             json={"projectId": project_id, "filename": "bad.txt", "contentType": "text/plain", "dataUrl": "not-base64"},
         )
         self.assertEqual(invalid_data_url.status_code, 400)
+
+        oversize_upload = self.client.post(
+            "/api/uploads",
+            json={
+                "projectId": project_id,
+                "filename": "large.txt",
+                "contentType": "text/plain",
+                "dataUrl": "data:text/plain;base64," + base64.b64encode(b"x" * (1024 * 1024 + 1)).decode(),
+            },
+        )
+        self.assertEqual(oversize_upload.status_code, 413)
 
         missing_project = self.client.post(
             "/api/uploads",

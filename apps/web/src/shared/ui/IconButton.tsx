@@ -9,7 +9,7 @@ type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 export function IconButton({ icon, label, active = false, className = "", ...props }: IconButtonProps) {
   return (
     <button
-      className={`icon-button ${active ? "is-active" : ""} ${className}`}
+      className={["icon-button", active && "is-active", className].filter(Boolean).join(" ")}
       type="button"
       title={label}
       aria-label={label}

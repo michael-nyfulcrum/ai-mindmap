@@ -6,6 +6,8 @@ export function AppLoading() {
         <span className="app-loading-node app-loading-node-one" />
         <span className="app-loading-node app-loading-node-two" />
         <span className="app-loading-node app-loading-node-three" />
+        <span className="app-loading-node app-loading-node-four" />
+        <span className="app-loading-node app-loading-node-five" />
       </div>
       <h1>AI Mindmap</h1>
       <p>Preparing your canvas&hellip;</p>

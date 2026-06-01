@@ -50,9 +50,11 @@ export const CanvasToolbar = memo(function CanvasToolbar({
             icon={button.icon}
             label={`Add ${button.label}`}
             onClick={() => onAddNode(button.type)}
+            className={`toolbar-node-btn-${button.type}`}
           />
         ))}
       </div>
+      <div className="toolbar-sep" aria-hidden="true" />
       <div className="toolbar-group">
         <IconButton icon={<Scan size={18} />} label="Fit view" onClick={onFitView} />
         <IconButton icon={<Save size={18} />} label="Save" onClick={onSave} />
