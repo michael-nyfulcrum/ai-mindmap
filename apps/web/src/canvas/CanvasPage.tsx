@@ -656,7 +656,6 @@ export function CanvasPage() {
         <CanvasInspector
           projectId={project.id}
           activeNode={selectedNode}
-          allEdges={edges}
           onUpdateNode={updateNode}
           onRequestImpactPlan={requestImpactPlan}
           onCollapse={() => setIsInspectorCollapsed(true)}

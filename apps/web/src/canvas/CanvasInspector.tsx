@@ -1,16 +1,17 @@
-import { memo, useEffect, useMemo, useState } from "react";
-import { History, PanelRightClose, WandSparkles } from "lucide-react";
+import { memo, useEffect, useState } from "react";
+import { History, Maximize2, PanelRightClose, WandSparkles } from "lucide-react";
 import { listNodeVersions } from "../api/canvasApi";
-import type { CanvasFlowEdge, CanvasFlowNode, CanvasNodeData, ContractChangeVersion, ImpactStatus } from "./canvasTypes";
+import type { CanvasFlowNode, CanvasNodeData, ContractChangeVersion, ImpactStatus } from "./canvasTypes";
 import { NODE_TYPE_LABELS } from "./canvasTypes";
 import { Button } from "../shared/ui/Button";
 import { Panel } from "../shared/ui/Panel";
 import { Textarea } from "../shared/ui/Textarea";
+import { ContentEditorModal } from "./ContentEditorModal";
+import { DiffStat, DiffView } from "./DiffView";
 
 type CanvasInspectorProps = {
   projectId: string;
   activeNode: CanvasFlowNode;
-  allEdges: CanvasFlowEdge[];
   onUpdateNode: (nodeId: string, data: CanvasNodeData) => void;
   onRequestImpactPlan: (node: CanvasFlowNode) => void;
   onCollapse: () => void;
@@ -19,7 +20,6 @@ type CanvasInspectorProps = {
 export const CanvasInspector = memo(function CanvasInspector({
   projectId,
   activeNode,
-  allEdges,
   onUpdateNode,
   onRequestImpactPlan,
   onCollapse,
@@ -29,11 +29,12 @@ export const CanvasInspector = memo(function CanvasInspector({
     versions: ContractChangeVersion[];
     status: "idle" | "error";
   }>({ nodeId: "", versions: [], status: "idle" });
-  const relationships = useMemo(() => {
-    return allEdges.filter((edge) => edge.source === activeNode.id || edge.target === activeNode.id);
-  }, [activeNode, allEdges]);
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+  const [editorBaseline, setEditorBaseline] = useState<string | null>(null);
+
   const audit = activeNode.data.audit;
   const impact = activeNode.data.impact;
+  const content = activeNode.data.fields.content ?? "";
   const isVersionedNode = ["project_contract", "requirement"].includes(activeNode.data.canvasType);
   const versions = isVersionedNode && versionResult.nodeId === activeNode.id ? versionResult.versions : [];
   const versionState = !isVersionedNode
@@ -41,6 +42,7 @@ export const CanvasInspector = memo(function CanvasInspector({
     : versionResult.nodeId === activeNode.id
       ? versionResult.status
       : "loading";
+  const selectedVersion = versions.find((version) => version.id === selectedVersionId) ?? versions[0] ?? null;
 
   useEffect(() => {
     let cancelled = false;
@@ -65,12 +67,16 @@ export const CanvasInspector = memo(function CanvasInspector({
     };
   }, [activeNode.id, isVersionedNode, projectId]);
 
-  const updateContent = (value: string) => {
+  const patchNode = (patch: Partial<CanvasNodeData>) => {
     onUpdateNode(activeNode.id, {
       ...activeNode.data,
-      fields: { content: value },
+      ...patch,
       updatedAt: new Date().toISOString(),
     });
+  };
+
+  const updateContent = (value: string) => {
+    patchNode({ fields: { content: value } });
   };
 
   return (
@@ -83,14 +89,18 @@ export const CanvasInspector = memo(function CanvasInspector({
     >
       <div className="inspector-content">
         <section className="inspector-summary">
-          <span>{NODE_TYPE_LABELS[activeNode.data.canvasType]}</span>
-          <strong>{activeNode.data.title}</strong>
-          {impact ? <ImpactBadge status={impact.status} /> : null}
+          <div className="inspector-summary-row">
+            <span>{NODE_TYPE_LABELS[activeNode.data.canvasType]}</span>
+            {impact ? <ImpactBadge status={impact.status} /> : null}
+          </div>
+          <strong>{activeNode.data.title || "Untitled"}</strong>
         </section>
 
         {impact ? (
-          <section className="inspector-section impact-panel">
-            <h3>Change Impact</h3>
+          <section className="inspector-card impact-panel">
+            <div className="inspector-card-head">
+              <h3>Change Impact</h3>
+            </div>
             <p>{impact.reason}</p>
             <small>
               Flagged from version {shortVersionId(impact.sourceVersionId)} on {formatAuditDate(impact.updatedAt)}
@@ -101,105 +111,139 @@ export const CanvasInspector = memo(function CanvasInspector({
           </section>
         ) : null}
 
+        <section className="inspector-section">
+          <h3>Details</h3>
+          <div className="form-stack">
+            <label>
+              <span>Title</span>
+              <input value={activeNode.data.title} onChange={(event) => patchNode({ title: event.target.value })} />
+            </label>
+            <label>
+              <span>Tags</span>
+              <input
+                value={activeNode.data.tags.join(", ")}
+                placeholder="comma, separated"
+                onChange={(event) =>
+                  patchNode({
+                    tags: event.target.value
+                      .split(",")
+                      .map((tag) => tag.trim())
+                      .filter(Boolean),
+                  })
+                }
+              />
+            </label>
+          </div>
+        </section>
+
+        <section className="inspector-section">
+          <div className="inspector-section-head">
+            <h3>Content</h3>
+            <button
+              type="button"
+              className="inspector-link-button"
+              onClick={() => setEditorBaseline(content)}
+              title="Open full editor"
+            >
+              <Maximize2 size={13} /> Expand
+            </button>
+          </div>
+          <Textarea
+            className="inspector-content-area"
+            value={content}
+            onChange={(event) => updateContent(event.target.value)}
+            rows={9}
+            placeholder="Write in Markdown… click Expand for the full editor."
+          />
+        </section>
+
+        {isVersionedNode ? (
+          <section className="inspector-section version-history">
+            <div className="inspector-section-head">
+              <h3>
+                <History size={13} /> Version History
+              </h3>
+              {versions.length > 0 ? (
+                <select
+                  className="version-select"
+                  value={selectedVersion?.id ?? ""}
+                  onChange={(event) => setSelectedVersionId(event.target.value)}
+                  aria-label="Select version"
+                >
+                  {versions.map((version) => (
+                    <option key={version.id} value={version.id}>
+                      v{version.versionNumber} · {titleCaseField(version.changeType)}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+            </div>
+
+            {versionState === "loading" ? <p className="version-note">Loading history…</p> : null}
+            {versionState === "error" ? <p className="version-note">Version history unavailable.</p> : null}
+            {versionState === "idle" && versions.length === 0 ? (
+              <p className="version-note">No semantic changes recorded yet.</p>
+            ) : null}
+
+            {selectedVersion ? (
+              <article className="version-detail">
+                <div className="version-detail-head">
+                  <span className={`change-pill change-pill-${selectedVersion.changeType}`}>
+                    {titleCaseField(selectedVersion.changeType)}
+                  </span>
+                  <DiffStat before={selectedVersion.contentBefore ?? ""} after={selectedVersion.contentAfter ?? ""} />
+                </div>
+                <p className="version-summary">{selectedVersion.summary}</p>
+                {selectedVersion.changedFields.length > 0 ? (
+                  <div className="version-fields">
+                    {selectedVersion.changedFields.map((field) => (
+                      <span key={field}>{titleCaseField(field)}</span>
+                    ))}
+                  </div>
+                ) : null}
+                <DiffView
+                  before={selectedVersion.contentBefore ?? ""}
+                  after={selectedVersion.contentAfter ?? ""}
+                  emptyLabel="No content changes in this version."
+                />
+                <small className="version-foot">
+                  {selectedVersion.createdBy} · {formatAuditDate(selectedVersion.createdAt)}
+                  {selectedVersion.affectedNodes.length > 0
+                    ? ` · ${selectedVersion.affectedNodes.length} node${selectedVersion.affectedNodes.length === 1 ? "" : "s"} affected`
+                    : ""}
+                </small>
+              </article>
+            ) : null}
+          </section>
+        ) : null}
+
         {audit ? (
           <section className="inspector-section audit-grid">
             <h3>Audit</h3>
             <dl>
               <div>
                 <dt>Created</dt>
-                <dd>{audit.createdBy} - {formatAuditDate(audit.createdAt)}</dd>
+                <dd>{audit.createdBy} · {formatAuditDate(audit.createdAt)}</dd>
               </div>
               <div>
                 <dt>Updated</dt>
-                <dd>{audit.updatedBy} - {formatAuditDate(audit.updatedAt)}</dd>
+                <dd>{audit.updatedBy} · {formatAuditDate(audit.updatedAt)}</dd>
               </div>
             </dl>
           </section>
         ) : null}
-
-        <section className="inspector-section">
-          <h3>Details</h3>
-          <div className="form-stack">
-            <label>
-              <span>Title</span>
-              <input
-                value={activeNode.data.title}
-                onChange={(event) =>
-                  onUpdateNode(activeNode.id, {
-                    ...activeNode.data,
-                    title: event.target.value,
-                    updatedAt: new Date().toISOString(),
-                  })
-                }
-              />
-            </label>
-            <label>
-              <span>Tags</span>
-              <input
-                value={activeNode.data.tags.join(", ")}
-                onChange={(event) =>
-                  onUpdateNode(activeNode.id, {
-                    ...activeNode.data,
-                    tags: event.target.value
-                      .split(",")
-                      .map((tag) => tag.trim())
-                      .filter(Boolean),
-                    updatedAt: new Date().toISOString(),
-                  })
-                }
-              />
-            </label>
-          </div>
-        </section>
-
-        <section className="inspector-section">
-          <h3>Content</h3>
-          <div className="form-stack">
-            <label>
-              <span>Content</span>
-              <Textarea value={activeNode.data.fields.content ?? ""} onChange={(event) => updateContent(event.target.value)} rows={10} />
-            </label>
-          </div>
-        </section>
-
-        <section className="inspector-section relationship-list">
-          <h3>Relationships</h3>
-          {relationships.length === 0 ? (
-            <p>No connected relationships.</p>
-          ) : (
-            relationships.map((edge) => (
-              <span key={edge.id}>
-                {edge.source === activeNode.id ? "Outgoing" : "Incoming"}: {titleCaseField(String(edge.label || edge.data?.relationship || ""))}
-              </span>
-            ))
-          )}
-        </section>
-
-        {isVersionedNode ? (
-          <section className="inspector-section version-history">
-            <h3>
-              <History size={13} />
-              Version History
-            </h3>
-            {versionState === "loading" ? <p>Loading history...</p> : null}
-            {versionState === "error" ? <p>Version history unavailable.</p> : null}
-            {versionState === "idle" && versions.length === 0 ? <p>No semantic changes recorded yet.</p> : null}
-            {versions.slice(0, 6).map((version) => (
-              <article key={version.id}>
-                <div>
-                  <strong>v{version.versionNumber}</strong>
-                  <span>{version.changeType}</span>
-                </div>
-                <p>{version.summary}</p>
-                <small>
-                  {version.createdBy} - {formatAuditDate(version.createdAt)}
-                  {version.affectedNodes.length > 0 ? ` - ${version.affectedNodes.length} affected` : ""}
-                </small>
-              </article>
-            ))}
-          </section>
-        ) : null}
       </div>
+
+      {editorBaseline !== null ? (
+        <ContentEditorModal
+          title={activeNode.data.title || "Untitled"}
+          typeLabel={NODE_TYPE_LABELS[activeNode.data.canvasType]}
+          value={content}
+          baseline={editorBaseline}
+          onChange={updateContent}
+          onClose={() => setEditorBaseline(null)}
+        />
+      ) : null}
     </Panel>
   );
 });

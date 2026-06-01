@@ -933,6 +933,8 @@ class AppDatabase:
         )
 
     def _change_version(self, row: sqlite3.Row) -> ContractChangeVersion:
+        before = _loads(row["before_json"], None)
+        after = _loads(row["after_json"], None)
         return ContractChangeVersion(
             id=row["id"],
             projectId=row["project_id"],
@@ -944,6 +946,10 @@ class AppDatabase:
             summary=row["summary"],
             changedFields=_loads(row["changed_fields_json"], []),
             affectedNodes=_loads(row["affected_nodes_json"], []),
+            titleBefore=_node_title(before),
+            titleAfter=_node_title(after),
+            contentBefore=_node_content(before) if before else None,
+            contentAfter=_node_content(after) if after else None,
             createdBy=row["created_by"],
             createdAt=row["created_at"],
         )
@@ -1102,6 +1108,15 @@ def _node_content(node: dict[str, Any] | None) -> str:
     if not isinstance(fields, dict):
         return ""
     return str(fields.get("content") or "").strip()
+
+
+def _node_title(node: dict[str, Any] | None) -> str | None:
+    if not node:
+        return None
+    data = node.get("data")
+    if not isinstance(data, dict):
+        return None
+    return str(data.get("title") or "")
 
 
 def _content_from_legacy_fields(fields: dict[str, Any]) -> str:

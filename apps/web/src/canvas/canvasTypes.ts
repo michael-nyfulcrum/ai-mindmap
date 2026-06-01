@@ -90,6 +90,10 @@ export type ContractChangeVersion = {
   summary: string;
   changedFields: string[];
   affectedNodes: ChangeImpact[];
+  titleBefore?: string | null;
+  titleAfter?: string | null;
+  contentBefore?: string | null;
+  contentAfter?: string | null;
   createdBy: string;
   createdAt: string;
 };

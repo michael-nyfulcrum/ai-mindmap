@@ -76,6 +76,10 @@ class ContractChangeVersion(BaseModel):
     summary: str
     changedFields: list[str] = Field(default_factory=list)
     affectedNodes: list[ChangeImpact] = Field(default_factory=list)
+    titleBefore: str | None = None
+    titleAfter: str | None = None
+    contentBefore: str | None = None
+    contentAfter: str | None = None
     createdBy: str
     createdAt: str
 
