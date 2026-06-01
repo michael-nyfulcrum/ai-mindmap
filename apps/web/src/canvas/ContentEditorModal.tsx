@@ -97,7 +97,7 @@ export function ContentEditorModal({ title, typeLabel, value, baseline, onChange
 
           <footer className="editor-foot">
             <span className={`editor-status ${isDirty ? "is-dirty" : ""}`}>
-              {isDirty ? "Unsaved edits in this session — autosaving" : "All changes saved"}
+              {isDirty ? "Edited — save in the inspector to create a version" : "No changes since last save"}
             </span>
             <Button variant="primary" onClick={onClose}>
               Done

@@ -937,6 +937,83 @@ button:disabled {
   line-height: 1.55;
 }
 
+.inspector-save {
+  position: sticky;
+  bottom: -14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px -14px -14px;
+  padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgb(255 255 255 / 9%);
+  background: linear-gradient(180deg, rgb(8 13 25 / 88%), rgb(6 11 22 / 98%));
+  backdrop-filter: blur(8px);
+}
+
+.inspector-save-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.inspector-save-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgb(255 255 255 / 40%);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.inspector-save-status::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.inspector-save-status.is-dirty {
+  color: #f0b454;
+}
+
+.inspector-commit-input {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 7px;
+  background: rgb(255 255 255 / 6%);
+  color: #dde5f0;
+  font-size: 12.5px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 3%);
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.inspector-commit-input::placeholder {
+  color: rgb(255 255 255 / 30%);
+}
+
+.inspector-commit-input:focus {
+  outline: none;
+  border-color: rgb(31 111 235 / 60%);
+  background: rgb(31 111 235 / 8%);
+}
+
+.inspector-commit-input:disabled {
+  opacity: 0.55;
+}
+
+.inspector-save-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .relationship-list,
 .selection-summary,
 .empty-state {

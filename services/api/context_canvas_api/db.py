@@ -435,7 +435,9 @@ class AppDatabase:
         ]
         return CanvasSnapshot(project=project, nodes=nodes, edges=edges)
 
-    def save_snapshot(self, snapshot: CanvasSnapshot, actor: str = "local user") -> CanvasSnapshot:
+    def save_snapshot(
+        self, snapshot: CanvasSnapshot, actor: str = "local user", commit_message: str | None = None
+    ) -> CanvasSnapshot:
         existing = self.get_snapshot(snapshot.project.id)
         if existing and _same_saved_canvas(existing, snapshot):
             return existing
@@ -453,7 +455,9 @@ class AppDatabase:
             )
             for node in snapshot.nodes
         ]
-        versions = self._build_change_versions(project.id, project, existing_nodes, incoming_nodes, snapshot.edges, actor, now)
+        versions = self._build_change_versions(
+            project.id, project, existing_nodes, incoming_nodes, snapshot.edges, actor, now, commit_message
+        )
         _apply_change_impacts(incoming_nodes, versions)
         with self.connection:
             self.connection.execute(
@@ -782,6 +786,7 @@ class AppDatabase:
         edges: list[dict[str, Any]],
         actor: str,
         now: str,
+        commit_message: str | None = None,
     ) -> list[dict[str, Any]]:
         incoming_by_id = {node["id"]: node for node in incoming_nodes}
         semantic_node_ids = {
@@ -812,6 +817,8 @@ class AppDatabase:
                 version_id,
                 now,
             )
+            if commit_message:
+                summary = commit_message
             versions.append(
                 {
                     "id": version_id,

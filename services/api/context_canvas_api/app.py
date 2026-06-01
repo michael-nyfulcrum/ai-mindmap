@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from context_canvas_api.analyzer import AIProviderError, analyze_canvas, chat_with_canvas
 from context_canvas_api.db import AppDatabase, database_path
@@ -155,10 +155,17 @@ def create_app(
         return snapshot.model_dump()
 
     @app.put("/api/projects/{project_id}/canvas")
-    def put_canvas(project_id: str, payload: CanvasSnapshot, request: Request, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
+    async def put_canvas(project_id: str, request: Request, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
+        body = await _json_object(request)
+        commit_message = body.pop("commitMessage", None)
+        try:
+            payload = CanvasSnapshot.model_validate(body)
+        except ValidationError as exc:
+            raise HTTPException(status_code=422, detail=exc.errors()) from exc
         if payload.project.id != project_id:
             raise HTTPException(status_code=400, detail="Canvas project ID does not match URL")
-        return db.save_snapshot(payload, actor=_actor(request)).model_dump()
+        message = commit_message.strip() if isinstance(commit_message, str) else None
+        return db.save_snapshot(payload, actor=_actor(request), commit_message=message or None).model_dump()
 
     @app.post("/api/projects/{project_id}/nodes")
     async def create_node(project_id: str, request: Request, db: AppDatabase = Depends(_db)) -> dict[str, Any]:

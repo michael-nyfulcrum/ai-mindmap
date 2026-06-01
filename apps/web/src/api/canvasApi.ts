@@ -64,11 +64,11 @@ export async function deleteProject(projectId: string) {
   }
 }
 
-export async function saveCanvas(snapshot: CanvasSnapshot) {
+export async function saveCanvas(snapshot: CanvasSnapshot, commitMessage?: string) {
   const response = await fetch(`${API_BASE_URL}/api/projects/${snapshot.project.id}/canvas`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(snapshot),
+    body: JSON.stringify(commitMessage ? { ...snapshot, commitMessage } : snapshot),
   });
   if (!response.ok) {
     throw new Error("Failed to save canvas");

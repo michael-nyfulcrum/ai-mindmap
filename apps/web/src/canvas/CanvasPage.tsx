@@ -132,34 +132,41 @@ export function CanvasPage() {
     };
   }, []);
 
-  const persist = useCallback(async () => {
-    const {
-      project: currentProject,
-      nodes: currentNodes,
-      edges: currentEdges,
-    } = snapshotRef.current;
-    if (!currentProject.id) {
-      return;
-    }
-    const updatedProject = {
-      ...currentProject,
-      updatedAt: nowIso(),
-      viewport: getViewportRef.current(),
-    };
-    dirtyRef.current = false;
-    setProject(updatedProject);
-    setSaveState("saving");
-    try {
-      const saved = await saveCanvas({ project: updatedProject, nodes: currentNodes, edges: currentEdges });
-      setProject(saved.project);
-      setNodes(saved.nodes);
-      setEdges(saved.edges);
-      setSaveState("saved");
-    } catch {
-      dirtyRef.current = true;
-      setSaveState("error");
-    }
-  }, [setEdges, setNodes]);
+  const persist = useCallback(
+    async (options?: { nodes?: CanvasFlowNode[]; commitMessage?: string }) => {
+      const {
+        project: currentProject,
+        nodes: snapshotNodes,
+        edges: currentEdges,
+      } = snapshotRef.current;
+      const currentNodes = options?.nodes ?? snapshotNodes;
+      if (!currentProject.id) {
+        return;
+      }
+      const updatedProject = {
+        ...currentProject,
+        updatedAt: nowIso(),
+        viewport: getViewportRef.current(),
+      };
+      dirtyRef.current = false;
+      setProject(updatedProject);
+      setSaveState("saving");
+      try {
+        const saved = await saveCanvas(
+          { project: updatedProject, nodes: currentNodes, edges: currentEdges },
+          options?.commitMessage,
+        );
+        setProject(saved.project);
+        setNodes(saved.nodes);
+        setEdges(saved.edges);
+        setSaveState("saved");
+      } catch {
+        dirtyRef.current = true;
+        setSaveState("error");
+      }
+    },
+    [setEdges, setNodes],
+  );
 
   useEffect(() => {
     if (!projectId || !dirtyRef.current) {
@@ -285,12 +292,13 @@ export function CanvasPage() {
     [setEdges],
   );
 
-  const updateNode = useCallback(
-    (nodeId: string, data: CanvasNodeData) => {
-      dirtyRef.current = true;
-      setNodes((current) => current.map((node) => (node.id === nodeId ? { ...node, data } : node)));
+  const saveNodeVersion = useCallback(
+    async (nodeId: string, data: CanvasNodeData, commitMessage: string) => {
+      const nextNodes = snapshotRef.current.nodes.map((node) => (node.id === nodeId ? { ...node, data } : node));
+      setNodes(nextNodes);
+      await persist({ nodes: nextNodes, commitMessage: commitMessage || undefined });
     },
-    [setNodes],
+    [persist, setNodes],
   );
 
   const deleteActiveItems = useCallback(() => {
@@ -654,9 +662,11 @@ export function CanvasPage() {
 
       {selectedNode && !isInspectorCollapsed ? (
         <CanvasInspector
+          key={selectedNode.id}
           projectId={project.id}
           activeNode={selectedNode}
-          onUpdateNode={updateNode}
+          saveState={saveState}
+          onSaveNode={saveNodeVersion}
           onRequestImpactPlan={requestImpactPlan}
           onCollapse={() => setIsInspectorCollapsed(true)}
         />
