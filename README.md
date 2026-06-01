@@ -65,6 +65,12 @@ make reset-db
 
 ## Docker Demo
 
+The demo stack is intentionally vendor-neutral: Vite/React, FastAPI, FastMCP,
+SQLite, Docker Compose, and Caddy. It does not require Vercel, Supabase, or a
+managed database account; the same setup runs locally or on a basic Linux
+server. See [Demo](docs/demo.md#demo-positioning) for the customer-facing
+positioning.
+
 ```sh
 cp .env.example .env
 make docker-up
