@@ -14,7 +14,7 @@ SERVER_PATH ?= /root/ai-mindmap
 
 .DEFAULT_GOAL := help
 
-.PHONY: help doctor install setup env env-demo dev dev-api dev-web dev-mcp build lint test-e2e test-backend reset-db clean db-path compose-config docker-build docker-up docker-down docker-restart docker-logs docker-ps docker-smoke docker-health docker-shell-api docker-volume-list docker-backup docker-backup-data docker-clean live-check live-config live-preflight live-up live-down live-restart live-smoke live-health live-status live-logs live-backup live-backup-data live-deploy demo-check demo-config demo-up demo-down demo-smoke server-preflight server-rsync server-deploy package package-check release-check server-bootstrap
+.PHONY: help doctor install setup env env-demo dev dev-api dev-web dev-mcp build lint test-e2e test-backend reset-db clean db-path compose-config docker-build docker-up docker-down docker-restart docker-logs docker-ps docker-smoke docker-health docker-shell-api docker-volume-list docker-backup docker-backup-data docker-clean live-check live-config live-preflight live-up live-down live-restart live-smoke live-health live-status live-logs live-backup live-backup-data live-deploy demo-check demo-config demo-up demo-down demo-smoke demo-reset server-preflight server-rsync server-deploy package package-check release-check server-bootstrap
 
 help:
 	@printf "Context Canvas tasks\n\n"
@@ -44,6 +44,7 @@ help:
 	@printf "  make live-status    Show health, containers, disk, volumes, and recent logs\n"
 	@printf "  make live-logs      Follow live container logs\n"
 	@printf "  make live-down      Stop the live stack\n"
+	@printf "  make demo-reset     Back up, then wipe live data to an empty project list\n"
 	@printf "  make server-rsync   Copy this checkout to SERVER_HOST:SERVER_PATH\n"
 	@printf "  make server-deploy  Rsync to server, then run live deploy and status there\n"
 	@printf "  make docker-backup  Copy SQLite DB from the data volume\n"
@@ -191,6 +192,9 @@ demo-up: live-up
 demo-down: live-down
 
 demo-smoke: live-smoke
+
+demo-reset: live-check
+	COMPOSE="$(COMPOSE)" COMPOSE_FILES="$(LIVE_COMPOSE_FILES)" ./scripts/demo-reset.sh
 
 server-preflight:
 	./scripts/server-preflight.sh

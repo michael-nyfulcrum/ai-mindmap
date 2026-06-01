@@ -129,6 +129,7 @@ packaging, and backup commands.
 ## Documentation
 
 - [Demo](docs/demo.md)
+- [Demo runbook (live AI/MCP script + prompts)](docs/demo-runbook.md)
 - [Git workflow](docs/git-workflow.md)
 - [Product requirements](docs/product-requirements.md)
 - [Current product spec and progress tracker](docs/context-canvas-product-spec.md)
