@@ -97,7 +97,7 @@ export const CanvasAiPanel = memo(function CanvasAiPanel({
             <History size={16} />
           </button>
           <div className="chat-title">
-            <span>{activeChat?.title ?? "AI Chat"}</span>
+            <span title={activeChat?.title ?? "AI Copilot"}>{activeChat?.title ?? "AI Copilot"}</span>
           </div>
 
           {showHistory ? (
@@ -175,7 +175,7 @@ export const CanvasAiPanel = memo(function CanvasAiPanel({
           ) : messages.length === 0 && !isSending ? (
             <div className="chat-empty">
               <MessageSquareText size={22} />
-              <p>{activeChatId ? "Ask anything about your canvas." : "Ask a question to start analyzing this project."}</p>
+              <p>{activeChatId ? "Ask me anything about your canvas — I can see every node." : "Ask a question to start exploring this project together."}</p>
             </div>
           ) : (
             <>

@@ -17,6 +17,7 @@ import { ConnectAgentModal } from "./ConnectAgentModal";
 import { DeveloperHandoffPanel } from "./DeveloperHandoffPanel";
 import { CanvasInspector } from "./CanvasInspector";
 import { CanvasToolbar } from "./CanvasToolbar";
+import { GalaxyBackground } from "./GalaxyBackground";
 import { ProjectCarousel } from "./ProjectCarousel";
 import {
   createChat,
@@ -90,6 +91,11 @@ export function CanvasPage() {
 
   const activeNodes = useMemo(() => nodes.filter((node) => activeNodeIds.includes(node.id)), [activeNodeIds, nodes]);
   const selectedNode = activeNodes.length === 1 ? activeNodes[0] : null;
+  // Render every edge as a curved bezier, including projects saved with the older step style.
+  const displayEdges = useMemo(
+    () => edges.map((edge) => (edge.type === "default" ? edge : { ...edge, type: "default" })),
+    [edges],
+  );
 
   useEffect(() => {
     snapshotRef.current = { project, nodes, edges };
@@ -307,7 +313,7 @@ export function CanvasPage() {
           {
             ...connection,
             id: createId("edge"),
-            type: "smoothstep",
+            type: "default",
             label: "references",
             data: { relationship: "references", updatedAt: timestamp },
           },
@@ -664,8 +670,8 @@ export function CanvasPage() {
               : saveState === "saving"
                 ? "Saving…"
                 : saveState === "error"
-                  ? "Sync error"
-                  : "Saved"}
+                  ? "Couldn’t save"
+                  : "All saved"}
           </span>
           <Button icon={<Plug size={14} />} variant="ghost" onClick={() => setIsConnectOpen(true)}>
             Connect
@@ -680,12 +686,10 @@ export function CanvasPage() {
       </header>
 
       <section className="flow-region">
-        <div className="galaxy-background" aria-hidden="true">
-          <div className="galaxy-background-fallback" />
-        </div>
+        <GalaxyBackground />
         <ReactFlow
           nodes={nodes}
-          edges={edges}
+          edges={displayEdges}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}

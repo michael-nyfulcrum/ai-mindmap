@@ -10,7 +10,7 @@ export function AppLoading() {
         <span className="app-loading-node app-loading-node-five" />
       </div>
       <h1>AI Mindmap</h1>
-      <p>Preparing your canvas&hellip;</p>
+      <p>Warming up your neural canvas&hellip;</p>
     </main>
   );
 }

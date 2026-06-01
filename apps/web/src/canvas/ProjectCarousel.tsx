@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, HelpCircle, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { PROJECT_TEMPLATES } from "./projectTemplates";
 import type { CanvasProject } from "./canvasTypes";
+import { GalaxyBackground } from "./GalaxyBackground";
 import { TutorialDialog } from "./TutorialDialog";
 
 type ProjectCarouselProps = {
@@ -66,9 +67,7 @@ export function ProjectCarousel({
   return (
     <>
       <main className="project-picker" aria-busy={isLoading}>
-        <div className="galaxy-background" aria-hidden="true">
-          <div className="galaxy-background-fallback" />
-        </div>
+        <GalaxyBackground />
         <header className="project-picker-header">
           <div>
             <h1 className="project-picker-title">
@@ -76,7 +75,7 @@ export function ProjectCarousel({
               AI Mindmap
             </h1>
             <p className="project-picker-subtitle">
-              Visualize, connect, and analyze your project's ideas with AI.
+              Map your ideas as a constellation of nodes — and think them through with AI.
             </p>
           </div>
           <div className="project-picker-actions">

@@ -17,41 +17,36 @@ export function EdgeInspector({ edge, nodes, onUpdateLabel, onCollapse }: EdgeIn
 
   return (
     <Panel
-      title="Inspector"
+      title="Details"
       className="inspector-panel"
       actions={
-        <Button icon={<PanelRightClose size={15} />} variant="ghost" onClick={onCollapse} aria-label="Collapse inspector" title="Collapse inspector" />
+        <Button icon={<PanelRightClose size={15} />} variant="ghost" onClick={onCollapse} aria-label="Collapse details" title="Collapse details" />
       }
     >
       <div className="inspector-content">
-        <section className="inspector-summary">
-          <span>Relationship</span>
-          <strong>{relationship}</strong>
-        </section>
+        <header className="inspector-head inspector-head-link">
+          <div className="inspector-head-row">
+            <span className="inspector-kicker">Connection</span>
+          </div>
+          <input
+            className="inspector-title-input"
+            list="edge-relationship-options"
+            value={relationship}
+            placeholder="How are these related?"
+            aria-label="Relationship"
+            onChange={(event) => onUpdateLabel(edge.id, event.target.value)}
+          />
+          <datalist id="edge-relationship-options">
+            {EDGE_RELATIONSHIPS.map((option) => (
+              <option key={option} value={option} />
+            ))}
+          </datalist>
+        </header>
 
         <section className="inspector-section relationship-list">
-          <h3>Connected Nodes</h3>
+          <h3>Linked Nodes</h3>
           <span>From: {sourceTitle}</span>
           <span>To: {targetTitle}</span>
-        </section>
-
-        <section className="inspector-section">
-          <h3>Label</h3>
-          <div className="form-stack">
-            <label>
-              <span>Relationship</span>
-              <input
-                list="edge-relationship-options"
-                value={relationship}
-                onChange={(event) => onUpdateLabel(edge.id, event.target.value)}
-              />
-            </label>
-            <datalist id="edge-relationship-options">
-              {EDGE_RELATIONSHIPS.map((option) => (
-                <option key={option} value={option} />
-              ))}
-            </datalist>
-          </div>
         </section>
       </div>
     </Panel>

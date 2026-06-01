@@ -47,7 +47,7 @@ function node(input: TemplateNodeInput): CanvasFlowNode {
 function edge(input: TemplateEdgeInput): CanvasFlowEdge {
   return {
     id: input.id,
-    type: "smoothstep",
+    type: "default",
     source: input.source,
     target: input.target,
     label: input.relationship,

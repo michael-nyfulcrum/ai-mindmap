@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import difflib
 import json
 import os
 from typing import Any
@@ -94,7 +95,11 @@ Rules:
 - Prefer "needs_update" when the candidate should be revised for parity.
 - Prefer "review" when the candidate is connected and may be affected but the
   saved context is insufficient for a stronger status.
-- Keep the summary useful as a version-history entry.
+- The summary is a version-history entry, so describe the actual edit specifically:
+  name what changed between beforeNode and afterNode (e.g. a renamed title, an
+  added acceptance criterion, a reworded constraint). Never use vague filler like
+  "content changed", "updated node", or "made edits". Two different edits must
+  never produce the same summary.
 """.strip()
 
 
@@ -328,18 +333,22 @@ def _rule_based_change_impact(
     source_data = source.get("data") if isinstance(source.get("data"), dict) else {}
     source_type = str(source_data.get("canvasType") or "requirement")
     source_title = str(source_data.get("title") or source.get("id") or "Requirement")
-    change_text = "updated"
-    if before_node is None:
-        change_text = "created"
-    elif after_node is None:
-        change_text = "deleted"
-    summary = f"{change_text.capitalize()} {source_title}; review related requirements for parity."
-    if changed_fields:
-        summary = f"{change_text.capitalize()} {source_title}: {', '.join(changed_fields)} changed."
-
-    statuses: dict[str, str] = {}
+    before_data = before_node.get("data") if isinstance(before_node, dict) and isinstance(before_node.get("data"), dict) else {}
+    after_data = after_node.get("data") if isinstance(after_node, dict) and isinstance(after_node.get("data"), dict) else {}
     before_content = _node_content(before_node)
     after_content = _node_content(after_node)
+
+    if before_node is None:
+        line_count = len(after_content.splitlines()) or (1 if after_content else 0)
+        size = f" ({line_count} line{'s' if line_count != 1 else ''})" if line_count else ""
+        summary = f"Created {source_title}{size}"
+    elif after_node is None:
+        summary = f"Deleted {source_title}"
+    else:
+        details = _describe_field_changes(changed_fields, after_data, before_content, after_content)
+        summary = f"Updated {source_title} — {details}" if details else f"Updated {source_title}"
+
+    statuses: dict[str, str] = {}
     for node in candidate_nodes:
         node_id = str(node.get("id") or "")
         content = _node_content(node).lower()
@@ -374,6 +383,40 @@ def _rule_based_change_impact(
         if node.get("id")
     ]
     return summary[:220], impacts
+
+
+def _content_diff_stat(before: str, after: str) -> tuple[int, int]:
+    matcher = difflib.SequenceMatcher(a=before.splitlines(), b=after.splitlines())
+    added = removed = 0
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag in ("replace", "delete"):
+            removed += i2 - i1
+        if tag in ("replace", "insert"):
+            added += j2 - j1
+    return added, removed
+
+
+def _describe_field_changes(
+    changed_fields: list[str],
+    after_data: dict[str, Any],
+    before_content: str,
+    after_content: str,
+) -> str:
+    """Build a concise, edit-specific changelog line for the version history."""
+    parts: list[str] = []
+    if "title" in changed_fields:
+        new_title = str(after_data.get("title") or "").strip()
+        parts.append(f'renamed to "{new_title}"' if new_title else "renamed")
+    if "tags" in changed_fields:
+        after_tags = [str(tag).strip() for tag in (after_data.get("tags") or []) if str(tag).strip()]
+        parts.append(f"retagged ({', '.join(after_tags)})" if after_tags else "tags cleared")
+    if "content" in changed_fields:
+        added, removed = _content_diff_stat(before_content, after_content)
+        if added or removed:
+            parts.append(f"content +{added}/-{removed} line{'s' if (added + removed) != 1 else ''}")
+        else:
+            parts.append("content reworded")
+    return "; ".join(parts)
 
 
 def _node_content(node: dict[str, Any] | None) -> str:

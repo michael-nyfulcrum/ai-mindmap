@@ -762,7 +762,8 @@ button:disabled {
 }
 
 .galaxy-background canvas {
-  opacity: 0.9;
+  opacity: 1;
+  mix-blend-mode: screen;
 }
 
 .galaxy-background-fallback {
@@ -796,23 +797,25 @@ button:disabled {
 }
 
 .react-flow__edge-path {
-  stroke: rgb(100 166 248 / 50%);
-  stroke-width: 1.5;
-  transition: stroke 160ms ease;
+  stroke: rgb(132 188 255 / 92%);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 4px rgb(31 111 235 / 45%));
+  transition: stroke 160ms ease, stroke-width 160ms ease;
 }
 
 .react-flow__edge.selected .react-flow__edge-path,
 .react-flow__edge:hover .react-flow__edge-path {
-  stroke: rgb(31 111 235 / 90%);
-  filter: drop-shadow(0 0 5px rgb(31 111 235 / 50%));
+  stroke: rgb(120 190 255 / 100%);
+  stroke-width: 2.6;
+  filter: drop-shadow(0 0 8px rgb(31 111 235 / 70%));
 }
 
 .react-flow__edge-textbg {
-  fill: rgb(6 11 23 / 80%);
+  fill: rgb(6 11 23 / 90%);
 }
 
 .react-flow__edge-text {
-  fill: rgb(255 255 255 / 42%);
+  fill: rgb(255 255 255 / 64%);
   font-size: 11px;
 }
 
@@ -935,6 +938,10 @@ button:disabled {
 .inspector-panel {
   grid-area: inspector;
   overflow: auto;
+  background:
+    radial-gradient(130% 52% at 100% 0%, rgb(31 111 235 / 12%), transparent 62%),
+    radial-gradient(90% 40% at 0% 3%, rgb(123 63 228 / 9%), transparent 60%),
+    rgb(7 12 24 / 97%);
   animation: slide-left 280ms cubic-bezier(0.34, 1.28, 0.64, 1) both;
 }
 
@@ -1109,71 +1116,151 @@ button:disabled {
 .inspector-content {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 14px;
+  gap: 16px;
+  padding: 16px 16px 14px;
 }
 
-.inspector-summary {
+/* Header band — node identity with a type-keyed neural accent spine */
+.inspector-head {
+  --accent: #6aa6f8;
+
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  border: 1px solid rgb(31 111 235 / 14%);
-  border-radius: 10px;
-  background: rgb(31 111 235 / 8%);
-  padding: 12px;
+  gap: 9px;
+  padding: 2px 0 2px 14px;
 }
 
-.inspector-summary span {
-  color: rgb(255 255 255 / 38%);
+.inspector-head::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 10%, transparent));
+  box-shadow: 0 0 14px var(--accent);
+}
+
+.inspector-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.inspector-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
   font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.08em;
 }
 
-.inspector-summary strong {
-  color: #dde5f0;
-  font-size: 16px;
+.inspector-kicker::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 9px var(--accent);
+}
+
+.inspector-title-input {
+  width: 100%;
+  padding: 1px 0;
+  border: none;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  color: #eef3fb;
+  font-size: 18px;
+  font-weight: 750;
   line-height: 1.25;
+  letter-spacing: -0.01em;
+  transition: border-color 140ms ease;
 }
 
+.inspector-title-input::placeholder {
+  color: rgb(255 255 255 / 28%);
+}
+
+.inspector-title-input:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+
+.inspector-head-project_contract { --accent: #4a9eff; }
+.inspector-head-requirement { --accent: #3fc46b; }
+.inspector-head-link,
+.inspector-head-source_snapshot { --accent: #22d3ee; }
+.inspector-head-image { --accent: #e879b9; }
+.inspector-head-note { --accent: #b78cff; }
+
+/* Sections flow as a hairline-divided list rather than stacked cards */
 .inspector-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
+  padding-top: 15px;
+  border-top: 1px solid rgb(255 255 255 / 7%);
 }
 
 .inspector-section h3,
-.inspector-card h3,
 .relationship-list h3 {
   margin: 0;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: rgb(255 255 255 / 38%);
+  color: rgb(255 255 255 / 40%);
   font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.07em;
 }
 
-.inspector-summary-row {
+.inspector-field {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inspector-field-label {
+  color: rgb(255 255 255 / 40%);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.inspector-inline-input {
+  width: 100%;
+  height: 30px;
+  padding: 0 2px;
+  border: none;
+  border-bottom: 1px solid rgb(255 255 255 / 12%);
+  background: transparent;
+  color: #dde5f0;
+  font-size: 13px;
+  transition: border-color 140ms ease;
+}
+
+.inspector-inline-input::placeholder {
+  color: rgb(255 255 255 / 26%);
+}
+
+.inspector-inline-input:focus {
+  outline: none;
+  border-bottom-color: rgb(31 111 235 / 70%);
 }
 
 .inspector-section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-}
-
-.inspector-card {
-  display: flex;
-  flex-direction: column;
   gap: 8px;
 }
 
@@ -1305,52 +1392,75 @@ button:disabled {
   color: #b8c8de;
 }
 
-.impact-panel {
-  padding: 12px;
-  border: 1px solid rgb(184 84 25 / 28%);
+/* Impact — inline alert strip with an amber neural glow, not a heavy card */
+.inspector-alert {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px 13px;
+  border: 1px solid rgb(230 167 46 / 30%);
+  border-left-width: 3px;
   border-radius: 10px;
-  background: rgb(184 84 25 / 10%);
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgb(230 167 46 / 16%), transparent 64%),
+    rgb(230 167 46 / 6%);
 }
 
-.impact-panel p,
+.inspector-alert-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #f0c061;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.inspector-alert p,
 .version-history p {
   margin: 0;
-  color: #c0ccdc;
+  color: #e6d3ad;
   font-size: 12px;
   line-height: 1.5;
 }
 
-.impact-panel small,
+.version-history p {
+  color: #c0ccdc;
+}
+
+.inspector-alert small,
 .version-history small {
-  color: rgb(255 255 255 / 38%);
+  color: rgb(255 255 255 / 40%);
   font-size: 11px;
 }
 
-.audit-grid dl {
-  display: grid;
-  gap: 8px;
+/* Activity — compact inline meta row instead of boxed cards */
+.inspector-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 20px;
   margin: 0;
 }
 
-.audit-grid div {
-  padding: 8px;
-  border: 1px solid rgb(255 255 255 / 7%);
-  border-radius: 6px;
-  background: rgb(255 255 255 / 4%);
+.inspector-meta div {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.audit-grid dt {
-  color: rgb(255 255 255 / 36%);
-  font-size: 10px;
+.inspector-meta dt {
+  color: rgb(255 255 255 / 34%);
+  font-size: 9.5px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
-.audit-grid dd {
-  margin: 2px 0 0;
-  color: #b8c8de;
-  font-size: 12px;
+.inspector-meta dd {
+  margin: 0;
+  color: #aebccf;
+  font-size: 11.5px;
 }
 
 /* ── Impact Badges ───────────────────────────────────────────────────── */
@@ -2105,6 +2215,7 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex: 1;
   min-width: 0;
 }
 
@@ -2113,9 +2224,12 @@ button:disabled {
 }
 
 .chat-topbar-left .chat-title span {
+  display: -webkit-box;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.3;
+  word-break: break-word;
 }
 
 .chat-history-toggle {
@@ -3439,4 +3553,69 @@ button:disabled {
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
   }
+}
+
+/* ── Galaxy Surfaces — modals, dialogs & menus ───────────────────────── */
+
+.handoff-panel,
+.connect-modal,
+.editor-modal,
+.tutorial-dialog {
+  position: relative;
+  border-color: rgb(150 180 255 / 16%);
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgb(31 111 235 / 18%), transparent 56%),
+    radial-gradient(120% 90% at 100% 0%, rgb(123 63 228 / 16%), transparent 56%),
+    radial-gradient(150% 130% at 50% 128%, rgb(10 127 143 / 14%), transparent 62%),
+    linear-gradient(180deg, #0b1528 0%, #070e1e 100%);
+  box-shadow:
+    inset 0 0 0 1px rgb(130 170 255 / 9%),
+    inset 0 1px 0 rgb(180 210 255 / 14%),
+    0 34px 90px rgb(0 0 0 / 62%),
+    0 0 70px rgb(31 111 235 / 16%);
+}
+
+/* Glowing top filament across non-scrolling modals */
+.connect-modal::before,
+.editor-modal::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(120 180 255 / 80%),
+    rgb(196 140 255 / 80%),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.chat-history-menu,
+.template-menu {
+  border-color: rgb(150 180 255 / 16%);
+  background:
+    radial-gradient(120% 84% at 100% 0%, rgb(31 111 235 / 20%), transparent 60%),
+    radial-gradient(120% 84% at 0% 100%, rgb(123 63 228 / 18%), transparent 60%),
+    #0a1322;
+  box-shadow:
+    inset 0 0 0 1px rgb(130 170 255 / 9%),
+    0 24px 64px rgb(0 0 0 / 60%),
+    0 0 40px rgb(31 111 235 / 16%);
+}
+
+/* Topbar & toolbar pick up a faint nebula so the chrome matches the canvas */
+.topbar {
+  background:
+    radial-gradient(100% 320% at 0% 0%, rgb(31 111 235 / 12%), transparent 55%),
+    radial-gradient(100% 320% at 100% 0%, rgb(123 63 228 / 11%), transparent 55%),
+    rgb(6 11 24 / 90%);
+}
+
+.canvas-toolbar {
+  background:
+    radial-gradient(120% 360% at 50% 100%, rgb(31 111 235 / 12%), transparent 60%),
+    rgb(6 11 24 / 96%);
 }
