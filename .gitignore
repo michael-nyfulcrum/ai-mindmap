@@ -17,3 +17,9 @@ services/api/services/api/context-canvas.sqlite
 uploads
 services/api/uploads
 .DS_Store
+
+# Editor / sync tooling
+.idea
+.stfolder
+.stversions
+*.sync-conflict-*
