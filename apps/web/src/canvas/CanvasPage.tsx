@@ -11,8 +11,9 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Circle, Code2, LayoutGrid, PanelRightOpen, Sparkles } from "lucide-react";
+import { Circle, Code2, LayoutGrid, PanelRightOpen, Plug, Sparkles } from "lucide-react";
 import { CanvasAiPanel } from "./CanvasAiPanel";
+import { ConnectAgentModal } from "./ConnectAgentModal";
 import { DeveloperHandoffPanel } from "./DeveloperHandoffPanel";
 import { CanvasInspector } from "./CanvasInspector";
 import { CanvasToolbar } from "./CanvasToolbar";
@@ -79,6 +80,7 @@ export function CanvasPage() {
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
   const [isInspectorCollapsed, setIsInspectorCollapsed] = useState(false);
   const [isHandoffOpen, setIsHandoffOpen] = useState(false);
+  const [isConnectOpen, setIsConnectOpen] = useState(false);
   const { fitView, screenToFlowPosition, getViewport, setCenter } = useReactFlow();
   const projectId = project.id;
   const snapshotRef = useRef({ project, nodes, edges });
@@ -631,6 +633,9 @@ export function CanvasPage() {
                   ? "Sync error"
                   : "Saved"}
           </span>
+          <Button icon={<Plug size={14} />} variant="ghost" onClick={() => setIsConnectOpen(true)}>
+            Connect
+          </Button>
           <Button icon={<Code2 size={14} />} variant="ghost" onClick={() => setIsHandoffOpen(true)}>
             Handoff
           </Button>
@@ -707,6 +712,10 @@ export function CanvasPage() {
         onDeleteItems={deleteActiveItems}
         activeItemCount={activeNodeIds.length + activeEdgeIds.length}
       />
+
+      {isConnectOpen ? (
+        <ConnectAgentModal project={project} onClose={() => setIsConnectOpen(false)} />
+      ) : null}
 
       {isHandoffOpen ? (
         <DeveloperHandoffPanel

@@ -376,6 +376,266 @@ button:disabled {
   resize: vertical;
 }
 
+/* ── Connect Agent Modal ─────────────────────────────────────────────── */
+
+.connect-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(2 5 12 / 64%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: fade-in 160ms ease both;
+}
+
+.connect-modal {
+  width: min(640px, calc(100vw - 32px));
+  max-height: min(86vh, 760px);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 14px;
+  box-shadow: 0 40px 110px rgb(0 0 0 / 58%);
+  animation: pop-in 220ms cubic-bezier(0.34, 1.28, 0.64, 1) both;
+}
+
+.connect-inner {
+  display: flex;
+  flex-direction: column;
+  max-height: inherit;
+  overflow: auto;
+  padding: 18px;
+  gap: 14px;
+}
+
+.connect-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.connect-head-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.connect-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #7eb0ff;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.connect-title {
+  color: #e8edf5;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.connect-sub {
+  margin: 0;
+  max-width: 52ch;
+  color: rgb(255 255 255 / 48%);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.connect-label {
+  color: rgb(255 255 255 / 38%);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.connect-endpoint {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.connect-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 3%);
+}
+
+.connect-tab {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: rgb(255 255 255 / 52%);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.connect-tab:hover {
+  color: #dde5f0;
+}
+
+.connect-tab.is-active {
+  border-color: rgb(31 111 235 / 40%);
+  background: rgb(31 111 235 / 14%);
+  color: #e8edf5;
+}
+
+.connect-body {
+  min-height: 0;
+}
+
+.connect-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: connect-step;
+}
+
+.connect-steps li {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 30px;
+  position: relative;
+}
+
+.connect-steps li::before {
+  counter-increment: connect-step;
+  content: counter(connect-step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: inline-flex;
+  width: 21px;
+  height: 21px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgb(31 111 235 / 40%);
+  background: rgb(31 111 235 / 14%);
+  color: #7eb0ff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.connect-step-text {
+  color: #c0ccdc;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.connect-step-text code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 8%);
+  color: #dde5f0;
+  font-size: 12px;
+}
+
+.copy-field {
+  position: relative;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 8px;
+  background: rgb(3 7 16 / 70%);
+}
+
+.copy-field pre {
+  margin: 0;
+  overflow: auto;
+  padding: 10px 40px 10px 12px;
+}
+
+.copy-field code {
+  color: #c7d2e0;
+  font-family: "SFMono-Regular", ui-monospace, "JetBrains Mono", "Menlo", monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre;
+}
+
+.copy-field.is-one-line code {
+  white-space: nowrap;
+}
+
+.copy-field-button {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 7%);
+  color: rgb(255 255 255 / 62%);
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.copy-field-button:hover {
+  background: rgb(31 111 235 / 18%);
+  color: #e8edf5;
+}
+
+.connect-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+}
+
+.connect-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.connect-tool-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.connect-tool-chips code {
+  padding: 3px 8px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 5%);
+  color: #aebfd4;
+  font-family: "SFMono-Regular", ui-monospace, "JetBrains Mono", "Menlo", monospace;
+  font-size: 11px;
+}
+
+.connect-foot-note {
+  color: rgb(255 255 255 / 36%);
+  font-size: 11px;
+}
+
+.connect-foot-note code {
+  color: rgb(255 255 255 / 56%);
+}
+
 /* ── Toolbar ─────────────────────────────────────────────────────────── */
 
 .canvas-toolbar {
