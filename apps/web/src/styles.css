@@ -180,8 +180,8 @@ button:disabled {
 /* ── Canvas Shell ────────────────────────────────────────────────────── */
 
 .canvas-shell {
-  --chat-width: 360px;
-  --inspector-width: 400px;
+  --chat-width: 416px;
+  --inspector-width: 420px;
 
   position: relative;
   display: grid;
@@ -2290,6 +2290,7 @@ button:disabled {
 
 .chat-message {
   display: flex;
+  min-width: 0;
   animation: message-in 200ms cubic-bezier(0.34, 1.2, 0.64, 1) both;
 }
 
@@ -2302,6 +2303,7 @@ button:disabled {
 }
 
 .chat-bubble {
+  min-width: 0;
   max-width: 94%;
   padding: 10px 11px;
   border: 1px solid rgb(255 255 255 / 8%);
@@ -2310,6 +2312,8 @@ button:disabled {
   color: #c0ccdc;
   font-size: 12px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .chat-message-user .chat-bubble {
@@ -2335,7 +2339,9 @@ button:disabled {
 .chat-markdown {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   gap: 8px;
+  overflow-wrap: anywhere;
 }
 
 .chat-markdown p,

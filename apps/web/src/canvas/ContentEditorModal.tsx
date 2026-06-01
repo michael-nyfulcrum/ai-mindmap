@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Eye, GitCompareArrows, Pencil, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -39,7 +40,7 @@ export function ContentEditorModal({ title, typeLabel, value, baseline, onChange
 
   const isDirty = value !== baseline;
 
-  return (
+  return createPortal(
     <div className="editor-backdrop" role="dialog" aria-modal="true" aria-label={`Edit ${title}`} onMouseDown={onClose}>
       <Panel className="editor-modal">
         <div className="editor-modal-inner" onMouseDown={(event) => event.stopPropagation()}>
@@ -105,7 +106,8 @@ export function ContentEditorModal({ title, typeLabel, value, baseline, onChange
           </footer>
         </div>
       </Panel>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
