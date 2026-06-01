@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, memo, Suspense } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Bot, Highlighter, MessageSquareText, PanelLeftClose, PanelLeftOpen, Plus, Send, Trash2 } from "lucide-react";
@@ -27,7 +27,7 @@ type CanvasAiPanelProps = {
   onToggleCollapsed: () => void;
 };
 
-export function CanvasAiPanel({
+export const CanvasAiPanel = memo(function CanvasAiPanel({
   chats,
   activeChatId,
   messages,
@@ -185,7 +185,7 @@ export function CanvasAiPanel({
       </section>
     </aside>
   );
-}
+});
 
 function ChatMessageContent({ message }: { message: ChatMessage }) {
   if (message.role === "user") {

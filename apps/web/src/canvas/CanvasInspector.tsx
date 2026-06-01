@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { History, PanelRightClose, WandSparkles } from "lucide-react";
 import { listNodeVersions } from "../api/canvasApi";
 import type { CanvasFlowEdge, CanvasFlowNode, CanvasNodeData, ContractChangeVersion, ImpactStatus } from "./canvasTypes";
@@ -16,7 +16,7 @@ type CanvasInspectorProps = {
   onCollapse: () => void;
 };
 
-export function CanvasInspector({
+export const CanvasInspector = memo(function CanvasInspector({
   projectId,
   activeNode,
   allEdges,
@@ -202,7 +202,7 @@ export function CanvasInspector({
       </div>
     </Panel>
   );
-}
+});
 
 function ImpactBadge({ status }: { status: ImpactStatus }) {
   return <em className={`impact-badge impact-badge-${status}`}>{impactLabel(status)}</em>;

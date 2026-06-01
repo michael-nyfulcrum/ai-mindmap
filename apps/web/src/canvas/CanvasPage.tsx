@@ -553,6 +553,14 @@ export function CanvasPage() {
     setShowProjectPicker(true);
   }, [persist, project.id]);
 
+  const handleSelectionChange = useCallback(
+    ({ nodes: selected, edges: selectedEdges }: { nodes: CanvasFlowNode[]; edges: CanvasFlowEdge[] }) => {
+      setActiveNodeIds(selected.map((n) => n.id));
+      setActiveEdgeIds(selectedEdges.map((e) => e.id));
+    },
+    [],
+  );
+
   const handleLoadDemo = useCallback(async () => {
     const loaded = await listProjects();
     const snapshot = await loadCanvas(loaded.projects[0].id);
@@ -635,10 +643,7 @@ export function CanvasPage() {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={connectNodes}
-          onSelectionChange={({ nodes: activeNodes, edges: activeEdges }) => {
-            setActiveNodeIds(activeNodes.map((node) => node.id));
-            setActiveEdgeIds(activeEdges.map((edge) => edge.id));
-          }}
+          onSelectionChange={handleSelectionChange}
           fitView
           deleteKeyCode={null}
           multiSelectionKeyCode={["Meta", "Shift"]}

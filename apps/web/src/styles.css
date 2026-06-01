@@ -214,8 +214,8 @@ button:disabled {
     radial-gradient(circle at 52% 72%, rgb(126 87 255 / 22%), transparent 34%),
     radial-gradient(circle at 36% 58%, rgb(31 111 235 / 18%), transparent 26%);
   content: "";
-  filter: blur(32px);
-  opacity: 0.9;
+  filter: blur(18px);
+  opacity: 0.85;
   pointer-events: none;
   will-change: transform;
   animation: shell-lava-drift 16s ease-in-out infinite alternate;
@@ -252,8 +252,8 @@ button:disabled {
   box-shadow:
     0 8px 28px rgb(0 0 0 / 30%),
     0 1px 0 rgb(31 111 235 / 12%);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .topbar h1 {
@@ -270,7 +270,7 @@ button:disabled {
 
 .topbar h1 svg {
   color: #e060b0;
-  filter: drop-shadow(0 0 12px rgb(191 57 137 / 70%)) drop-shadow(0 0 4px rgb(31 111 235 / 30%));
+  filter: drop-shadow(0 0 10px rgb(191 57 137 / 65%));
   animation: sparkle-spin 4s linear infinite;
 }
 
@@ -291,8 +291,7 @@ button:disabled {
 
 .save-state svg:first-child {
   color: #21a35b;
-  filter: drop-shadow(0 0 6px rgb(33 163 91 / 60%));
-  animation: ai-core-pulse-flat 1600ms ease-in-out infinite;
+  filter: drop-shadow(0 0 5px rgb(33 163 91 / 50%));
 }
 
 /* ── Handoff Modal ───────────────────────────────────────────────────── */
@@ -388,10 +387,8 @@ button:disabled {
   gap: 12px;
   padding: 0 16px;
   border-top: 1px solid rgb(255 255 255 / 7%);
-  background: rgb(6 11 24 / 92%);
+  background: rgb(6 11 24 / 96%);
   box-shadow: 0 -10px 30px rgb(0 0 0 / 24%);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
   animation: slide-up 320ms cubic-bezier(0.34, 1.28, 0.64, 1) both;
 }
 
@@ -480,6 +477,7 @@ button:disabled {
   inset: 0;
   overflow: hidden;
   pointer-events: none;
+  contain: strict;
 }
 
 .galaxy-background canvas,
@@ -496,30 +494,19 @@ button:disabled {
 
 .galaxy-background-fallback {
   background:
-    radial-gradient(circle at 7% 11%, rgb(255 255 255 / 22%) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 16% 44%, rgb(200 220 255 / 18%) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 28% 23%, rgb(255 255 255 / 20%) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 38% 67%, rgb(180 160 255 / 16%) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 47% 14%, rgb(255 255 255 / 22%) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 55% 38%, rgb(100 200 255 / 18%) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 63% 82%, rgb(255 255 255 / 16%) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 72% 28%, rgb(255 255 255 / 20%) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 81% 54%, rgb(200 180 255 / 18%) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 89% 18%, rgb(255 255 255 / 22%) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 94% 72%, rgb(255 255 255 / 16%) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 42% 76%, rgb(255 255 255 / 18%) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 20% 32%, rgb(255 255 255 / 14%) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 74% 24%, rgb(255 255 255 / 16%) 0 1px, transparent 1.5px),
-    radial-gradient(ellipse at 64% 68%, rgb(0 0 0 / 52%), transparent 44%),
+    radial-gradient(circle at 16% 44%, rgb(200 220 255 / 20%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 47% 14%, rgb(255 255 255 / 24%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 72% 28%, rgb(255 255 255 / 22%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 89% 18%, rgb(255 255 255 / 24%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 42% 76%, rgb(180 160 255 / 20%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 20% 72%, rgb(255 255 255 / 18%) 0 1px, transparent 1.5px),
     radial-gradient(circle at 28% 36%, rgb(67 211 255 / 22%), transparent 26%),
     radial-gradient(circle at 78% 44%, rgb(178 92 255 / 20%), transparent 30%),
     radial-gradient(circle at 54% 78%, rgb(255 92 203 / 14%), transparent 32%);
   filter: blur(0.2px);
   opacity: 0.72;
   will-change: transform, opacity;
-  animation:
-    galaxy-fallback-drift 20s ease-in-out infinite alternate,
-    nebula-drift 8s ease-in-out infinite;
+  animation: galaxy-fallback-drift 20s ease-in-out infinite alternate;
 }
 
 .galaxy-background::after {
@@ -648,9 +635,8 @@ button:disabled {
   min-width: 0;
   min-height: 0;
   border-left: 1px solid rgb(255 255 255 / 7%);
-  background: rgb(7 12 24 / 94%);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: rgb(7 12 24 / 97%);
+  contain: paint;
 }
 
 .panel-header {
@@ -685,9 +671,7 @@ button:disabled {
   align-items: flex-start;
   justify-content: center;
   border-left: 1px solid rgb(255 255 255 / 7%);
-  background: rgb(7 12 24 / 92%);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: rgb(7 12 24 / 97%);
   padding-top: 12px;
   animation: slide-left 240ms cubic-bezier(0.34, 1.28, 0.64, 1) both;
 }
@@ -1330,10 +1314,9 @@ button:disabled {
   min-height: 0;
   grid-template-rows: auto minmax(100px, 22vh) minmax(0, 1fr);
   border-right: 1px solid rgb(255 255 255 / 7%);
-  background: rgb(6 11 23 / 92%);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: rgb(6 11 23 / 96%);
   box-shadow: 12px 0 40px rgb(0 0 0 / 30%);
+  contain: paint;
   animation: slide-right 300ms cubic-bezier(0.34, 1.28, 0.64, 1) both;
 }
 
@@ -1841,13 +1824,10 @@ button:disabled {
 
 @keyframes sparkle-spin {
   from {
-    transform: rotate(0deg) scale(1);
-  }
-  50% {
-    transform: rotate(180deg) scale(1.18);
+    transform: rotate(0deg);
   }
   to {
-    transform: rotate(360deg) scale(1);
+    transform: rotate(360deg);
   }
 }
 
@@ -1963,12 +1943,10 @@ button:disabled {
 @keyframes nebula-drift {
   0%,
   100% {
-    opacity: 0.65;
-    filter: blur(0.2px) brightness(1);
+    opacity: 0.62;
   }
   50% {
-    opacity: 0.82;
-    filter: blur(0.2px) brightness(1.12);
+    opacity: 0.80;
   }
 }
 
@@ -2020,7 +1998,7 @@ button:disabled {
 
 .project-picker-title svg {
   color: #e060b0;
-  filter: drop-shadow(0 0 16px rgb(191 57 137 / 75%)) drop-shadow(0 0 6px rgb(31 111 235 / 30%));
+  filter: drop-shadow(0 0 14px rgb(191 57 137 / 72%));
   animation: sparkle-spin 4s linear infinite;
 }
 
