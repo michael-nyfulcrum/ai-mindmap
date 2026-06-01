@@ -86,6 +86,7 @@ export function CanvasPage() {
   const snapshotRef = useRef({ project, nodes, edges });
   const getViewportRef = useRef(getViewport);
   const dirtyRef = useRef(false);
+  const handleSelectProjectRef = useRef<(id: string) => void>(() => {});
 
   const activeNodes = useMemo(() => nodes.filter((node) => activeNodeIds.includes(node.id)), [activeNodeIds, nodes]);
   const selectedNode = activeNodes.length === 1 ? activeNodes[0] : null;
@@ -125,13 +126,36 @@ export function CanvasPage() {
         // show empty state — user can create a new project
       }
       await minimumLoading;
-      if (!cancelled) setIsBooting(false);
+      if (cancelled) return;
+      setIsBooting(false);
+      const deepLinkId = parseCanvasId(window.location.pathname);
+      if (deepLinkId) {
+        handleSelectProjectRef.current(deepLinkId);
+      }
     }
 
     void loadProjectList();
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Keep app state in sync with browser back/forward navigation.
+  useEffect(() => {
+    function onPopState() {
+      const id = parseCanvasId(window.location.pathname);
+      if (id) {
+        if (id === snapshotRef.current.project.id) {
+          setShowProjectPicker(false);
+        } else {
+          handleSelectProjectRef.current(id);
+        }
+      } else {
+        setShowProjectPicker(true);
+      }
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
   const persist = useCallback(
@@ -476,9 +500,12 @@ export function CanvasPage() {
         await loadProjectChats(snapshot.project.id);
         setSaveState("saved");
         setShowProjectPicker(false);
+        navigateToCanvas(snapshot.project.id);
         window.requestAnimationFrame(() => fitView({ padding: 0.18 }));
       } catch {
         setSaveState("error");
+        setShowProjectPicker(true);
+        navigateToProjects();
       } finally {
         setIsLoadingProject(false);
         setProjectLoadingLabel("Loading project...");
@@ -486,6 +513,10 @@ export function CanvasPage() {
     },
     [fitView, loadProjectChats, setEdges, setNodes],
   );
+
+  useEffect(() => {
+    handleSelectProjectRef.current = handleSelectProject;
+  }, [handleSelectProject]);
 
   const handleCreateProject = useCallback(async (templateId?: string) => {
     setIsLoadingProject(true);
@@ -525,6 +556,7 @@ export function CanvasPage() {
       await loadProjectChats(snapshot.project.id);
       setSaveState("saved");
       setShowProjectPicker(false);
+      navigateToCanvas(snapshot.project.id);
       window.requestAnimationFrame(() => fitView({ padding: 0.18 }));
     } catch {
       setSaveState("error");
@@ -561,6 +593,7 @@ export function CanvasPage() {
     const result = await listProjects();
     setProjects(result.projects);
     setShowProjectPicker(true);
+    navigateToProjects();
   }, [persist, project.id]);
 
   const handleSelectionChange = useCallback(
@@ -578,6 +611,7 @@ export function CanvasPage() {
     setNodes(snapshot.nodes);
     setEdges(snapshot.edges);
     await loadProjectChats(snapshot.project.id);
+    navigateToCanvas(snapshot.project.id);
     window.requestAnimationFrame(() => fitView({ padding: 0.18 }));
   }, [fitView, loadProjectChats, setEdges, setNodes]);
 
@@ -727,6 +761,28 @@ export function CanvasPage() {
       ) : null}
     </main>
   );
+}
+
+function canvasPath(projectId: string) {
+  return `/canvas/${encodeURIComponent(projectId)}`;
+}
+
+function parseCanvasId(pathname: string): string | null {
+  const match = pathname.match(/^\/canvas\/([^/]+)\/?$/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function navigateToCanvas(projectId: string) {
+  const path = canvasPath(projectId);
+  if (window.location.pathname !== path) {
+    window.history.pushState(null, "", path);
+  }
+}
+
+function navigateToProjects() {
+  if (window.location.pathname !== "/") {
+    window.history.pushState(null, "", "/");
+  }
 }
 
 function fileToDataUrl(file: File) {

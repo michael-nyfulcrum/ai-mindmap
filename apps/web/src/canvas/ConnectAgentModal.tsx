@@ -31,6 +31,7 @@ const MCP_TOOLS = [
 export function ConnectAgentModal({ project, onClose }: ConnectAgentModalProps) {
   const [tab, setTab] = useState<AgentTab>("claude-code");
   const mcpUrl = RAW_MCP_URL.startsWith("http") ? RAW_MCP_URL : `${window.location.origin}${RAW_MCP_URL}`;
+  const canvasUrl = `${window.location.origin}/canvas/${project.id}`;
 
   return (
     <div className="connect-backdrop" role="dialog" aria-modal="true" aria-label="Connect your coding agent" onMouseDown={onClose}>
@@ -50,9 +51,15 @@ export function ConnectAgentModal({ project, onClose }: ConnectAgentModalProps) 
             <Button icon={<X size={15} />} variant="ghost" onClick={onClose} aria-label="Close" title="Close" />
           </header>
 
-          <div className="connect-endpoint">
-            <span className="connect-label">MCP endpoint</span>
-            <CopyField value={mcpUrl} mono oneLine />
+          <div className="connect-endpoint-row">
+            <div className="connect-endpoint">
+              <span className="connect-label">MCP endpoint</span>
+              <CopyField value={mcpUrl} mono oneLine />
+            </div>
+            <div className="connect-endpoint">
+              <span className="connect-label">This canvas</span>
+              <CopyField value={canvasUrl} mono oneLine />
+            </div>
           </div>
 
           <nav className="connect-tabs" aria-label="Agent">

@@ -457,10 +457,23 @@ button:disabled {
   letter-spacing: 0.07em;
 }
 
+.connect-endpoint-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 .connect-endpoint {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
+}
+
+@media (max-width: 560px) {
+  .connect-endpoint-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .connect-tabs {
