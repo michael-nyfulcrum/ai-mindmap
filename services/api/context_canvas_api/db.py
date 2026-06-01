@@ -1128,7 +1128,11 @@ def _node_title(node: dict[str, Any] | None) -> str | None:
 
 def _content_from_legacy_fields(fields: dict[str, Any]) -> str:
     content = str(fields.get("content") or "").strip()
-    ordered_keys = [
+    # Only fold human-readable prose fields into the visible content. Machine
+    # metadata (priority, status, sourceType, sourceId, sourceNodeIds, fetchedAt,
+    # metadata, …) is intentionally dropped so it never renders as raw
+    # "Label\nvalue" noise inside a node body.
+    prose_keys = [
         "assetUrl",
         "url",
         "sourceUrl",
@@ -1144,21 +1148,9 @@ def _content_from_legacy_fields(fields: dict[str, Any]) -> str:
         "acceptanceCriteria",
         "constraints",
         "definitionOfDone",
-        "sourceType",
-        "sourceId",
-        "priority",
-        "status",
-        "sourceNodeIds",
-        "fetchedAt",
-        "lastFetchedAt",
-        "metadata",
     ]
     legacy_parts: list[str] = [content] if content else []
-    seen = {"content"}
-    for key in ordered_keys + sorted(str(field) for field in fields.keys()):
-        if key in seen:
-            continue
-        seen.add(key)
+    for key in prose_keys:
         value = fields.get(key)
         if str(value or "").strip():
             legacy_parts.append(_legacy_field_text(key, value))
