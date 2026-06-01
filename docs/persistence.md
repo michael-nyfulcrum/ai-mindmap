@@ -72,13 +72,17 @@ For local development, leaving `CONTEXT_CANVAS_UPLOAD_DIR` unset stores files in
 
 ## Seed Data
 
-On first API startup, the database is seeded with:
+By default, a fresh database starts with no projects. Create the first project
+from the web app's template picker.
 
-```text
-GGR-5534 Help Center Change Request
+For local testing of the legacy demo snapshot, set:
+
+```sh
+CONTEXT_CANVAS_SEED_DEMO=1
 ```
 
-The demo canvas is intentionally a realistic change-request contract example. It includes Jira, Confluence, and Figma references as manually stored citations.
+When enabled, the API seeds a generic Help Center change-request canvas only if
+the `projects` table is empty.
 
 ## Proving Persistence
 

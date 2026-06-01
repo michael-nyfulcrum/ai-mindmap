@@ -240,7 +240,7 @@ Response:
   "citations": [
     {
       "nodeId": "node_contract",
-      "title": "GGR-5534 Help Center CR Contract"
+      "title": "Help Center CR Contract"
     }
   ]
 }
@@ -294,7 +294,7 @@ Search body:
 
 ```json
 {
-  "query": "GGR-5534",
+  "query": "HELP-1001",
   "sources": ["jira", "confluence"],
   "maxResults": 5
 }

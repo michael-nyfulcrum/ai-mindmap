@@ -11,8 +11,19 @@ curl "${curl_args[@]}" "${web_url}/" | grep -q '<div id="root"></div>'
 echo "Checking ${api_url}/health"
 curl "${curl_args[@]}" "${api_url}/health" | grep -q '"status":"ok"'
 
-echo "Checking seeded canvas data"
-canvas_json="$(curl "${curl_args[@]}" "${api_url}/api/projects/project_demo_context_canvas/canvas")"
+echo "Checking project creation and canvas persistence"
+created_json="$(curl "${curl_args[@]}" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Smoke test canvas","nodes":[{"id":"node_contract","type":"contextNode","position":{"x":0,"y":0},"data":{"canvasType":"project_contract","title":"Contract","fields":{"content":"Contract"},"tags":[],"updatedAt":"2026-05-14T00:00:00.000Z"}},{"id":"node_requirement","type":"contextNode","position":{"x":180,"y":0},"data":{"canvasType":"requirement","title":"Requirement","fields":{"content":"Requirement"},"tags":[],"updatedAt":"2026-05-14T00:00:00.000Z"}}],"edges":[{"id":"edge_contract_requirement","source":"node_contract","target":"node_requirement","label":"implements","data":{"relationship":"implements","updatedAt":"2026-05-14T00:00:00.000Z"}}]}' \
+  "${api_url}/api/projects")"
+project_id="$(CREATED_JSON="${created_json}" python3 - <<'PY'
+import json
+import os
+
+print(json.loads(os.environ["CREATED_JSON"])["project"]["id"])
+PY
+)"
+canvas_json="$(curl "${curl_args[@]}" "${api_url}/api/projects/${project_id}/canvas")"
 CANVAS_JSON="${canvas_json}" python3 - <<'PY'
 import json
 import os
@@ -22,15 +33,15 @@ canvas = json.loads(os.environ["CANVAS_JSON"])
 nodes = canvas.get("nodes") or []
 edges = canvas.get("edges") or []
 node_types = {node.get("data", {}).get("canvasType") for node in nodes}
-required_types = {"project_contract", "requirement", "source_snapshot", "link"}
+required_types = {"project_contract", "requirement"}
 missing = sorted(required_types - node_types)
 
 if missing:
-    sys.exit(f"seeded canvas is missing node types: {', '.join(missing)}")
-if len(nodes) < 4:
-    sys.exit(f"seeded canvas has too few nodes: {len(nodes)}")
+    sys.exit(f"canvas is missing node types: {', '.join(missing)}")
+if len(nodes) < 2:
+    sys.exit(f"canvas has too few nodes: {len(nodes)}")
 if not edges:
-    sys.exit("seeded canvas has no relationships")
+    sys.exit("canvas has no relationships")
 PY
 
 echo "Local smoke checks passed for ${web_url} and ${api_url}"

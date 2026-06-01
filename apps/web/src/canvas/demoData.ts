@@ -5,8 +5,8 @@ const createdAt = "2026-05-14T00:00:00.000Z";
 export const demoSnapshot: CanvasSnapshot = {
   project: {
     id: "project_demo_context_canvas",
-    name: "GGR-5534 Help Center Change Request",
-    description: "Client-ready change request contract with Jira, estimate, and design citations.",
+    name: "Help Center Change Request",
+    description: "Client-ready change request contract with request, estimate, and design citations.",
     createdAt,
     updatedAt: createdAt,
     viewport: { x: 120, y: 90, zoom: 0.82 },
@@ -18,7 +18,7 @@ export const demoSnapshot: CanvasSnapshot = {
       position: { x: 80, y: 80 },
       data: {
         canvasType: "project_contract",
-        title: "GGR-5534 Help Center CR Contract",
+        title: "Help Center CR Contract",
         tags: ["client-cr", "source-of-truth"],
         updatedAt: createdAt,
         fields: {
@@ -33,12 +33,12 @@ export const demoSnapshot: CanvasSnapshot = {
       position: { x: -300, y: -20 },
       data: {
         canvasType: "source_snapshot",
-        title: "Jira GGR-5534",
+        title: "Help Center Request",
         tags: ["jira", "request"],
         updatedAt: createdAt,
         fields: {
           content:
-            "https://gogira-platform.atlassian.net/browse/GGR-5534\n\nEstimation Request for Help Center Feature Implementation. The request asks for effort estimation to support a Change Request proposal for Help Center access, FAQ, content, contact support, submission feedback, backend/content management, and non-functional considerations.\n\nPrimary request source. Defines the Help Center estimation scope and requires frontend, backend, QA, assumptions, dependencies, integration points, and CR-ready output.\n\nissueType=Story; status=DEV COMPLETE; priority=Medium",
+            "https://example.com/issues/HELP-1001\n\nEstimation Request for Help Center Feature Implementation. The request asks for effort estimation to support a Change Request proposal for Help Center access, FAQ, content, contact support, submission feedback, backend/content management, and non-functional considerations.\n\nPrimary request source. Defines the Help Center estimation scope and requires frontend, backend, QA, assumptions, dependencies, integration points, and CR-ready output.\n\nissueType=Story; status=Ready for estimate; priority=Medium",
         },
       },
     },
@@ -53,7 +53,7 @@ export const demoSnapshot: CanvasSnapshot = {
         updatedAt: createdAt,
         fields: {
           content:
-            "https://gogira-platform.atlassian.net/wiki/spaces/GoGira/pages/452067329/Support+Feedback+Estimate\n\nEstimate page includes Help Center access, landing and search shell, FAQ module, Multimedia Content & Tips, Contact Support form, content setup, integration polish, QA/UAT, and workstream-level frontend/backend effort.\n\nPlanning source for the CR estimate. Current page frames Help Center as 3-4 calendar weeks in addition to broader Support & Feedback work.\n\nspace=GoGira; pageTitle=Support & Feedback Estimate",
+            "https://example.com/docs/support-feedback-estimate\n\nEstimate page includes Help Center access, landing and search shell, FAQ module, Multimedia Content & Tips, Contact Support form, content setup, integration polish, QA/UAT, and workstream-level frontend/backend effort.\n\nPlanning source for the CR estimate. Current page frames Help Center as 3-4 calendar weeks in addition to broader Support & Feedback work.\n\nspace=Client Workspace; pageTitle=Support & Feedback Estimate",
         },
       },
     },
@@ -68,7 +68,7 @@ export const demoSnapshot: CanvasSnapshot = {
         updatedAt: createdAt,
         fields: {
           content:
-            "https://www.figma.com/design/a881lyhzKFF92802CCIuwR/GoGira---School?node-id=3255-38085&t=KKkxU4MN61j1iX34-4\n\nDesign reference cited by GGR-5534 acceptance criteria.",
+            "https://example.com/designs/help-center-reference\n\nDesign reference cited by the Help Center acceptance criteria.",
         },
       },
     },

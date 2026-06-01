@@ -8,11 +8,23 @@ from test.helpers import ApiE2ECase, make_edge, make_node
 
 
 class ProjectAndCanvasE2ETest(ApiE2ECase):
-    def test_seeded_demo_canvas_loads_contract_sources_and_requirements(self) -> None:
+    def test_default_startup_does_not_seed_demo_project(self) -> None:
+        with TestClient(
+            create_app(
+                self.root / "empty-startup.sqlite",
+                upload_dir=self.upload_dir,
+                max_upload_bytes=1024 * 1024,
+            )
+        ) as client:
+            projects = client.get("/api/projects")
+            self.assertEqual(projects.status_code, 200)
+            self.assertEqual(projects.json()["projects"], [])
+
+    def test_optional_demo_canvas_loads_contract_sources_and_requirements(self) -> None:
         canvas = self.client.get("/api/projects/project_demo_context_canvas/canvas")
         self.assertEqual(canvas.status_code, 200)
         body = canvas.json()
-        self.assertEqual(body["project"]["name"], "GGR-5534 Help Center Change Request")
+        self.assertEqual(body["project"]["name"], "Help Center Change Request")
         node_types = {node["data"]["canvasType"] for node in body["nodes"]}
         self.assertIn("project_contract", node_types)
         self.assertIn("requirement", node_types)

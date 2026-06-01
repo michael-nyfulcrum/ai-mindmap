@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -83,13 +84,16 @@ class ChatMessageRequest(BaseModel):
 
 def create_app(
     db_path: Path | None = None,
-    seed: bool = True,
+    seed: bool | None = None,
     upload_dir: Path | None = None,
     max_upload_bytes: int | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app_instance: FastAPI):
-        app_instance.state.db = AppDatabase(db_path or database_path(), seed=seed)
+        app_instance.state.db = AppDatabase(
+            db_path or database_path(),
+            seed=_seed_enabled() if seed is None else seed,
+        )
         try:
             yield
         finally:
@@ -372,6 +376,10 @@ def _cors_origins() -> list[str]:
         "http://127.0.0.1:8080",
         "http://localhost:8080",
     ]
+
+
+def _seed_enabled() -> bool:
+    return os.getenv("CONTEXT_CANVAS_SEED_DEMO", "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _upload_dir() -> Path:

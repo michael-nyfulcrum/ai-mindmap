@@ -21,7 +21,7 @@ The MVP is intentionally minimal. It is not a task tracker, issue tracker, or op
 | Source fetch API | Deferred from core gate | Experimental endpoints remain in the repo, but Jira, Confluence, Slack, and external tooling are later improvements. |
 | MCP canvas service | Implemented | FastMCP tools expose saved canvas context to coding agents and can write requirement/source nodes back to SQLite. |
 | MCP external source tools | Deferred from core gate | Jira, Confluence, Figma, GitHub, and generic source helpers remain experimental. |
-| Backend e2e | Implemented | 11 no-mock e2e tests cover projects, seeded demo loading, canvas persistence, restart persistence, node/edge CRUD, uploads, DB-backed analysis, chat, MCP canvas context/tools/resources/prompts, version history, and legacy DB migration. |
+| Backend e2e | Implemented | 11 no-mock e2e tests cover projects, optional demo seed loading, canvas persistence, restart persistence, node/edge CRUD, uploads, DB-backed analysis, chat, MCP canvas context/tools/resources/prompts, version history, and legacy DB migration. |
 | Frontend runtime QA | Manual | Current frontend automation is TypeScript build and lint; interaction QA is manual. |
 | Auth and permissions | Not implemented | Local MVP only. |
 | Slack integration | Not implemented | Later improvement. |
@@ -30,10 +30,11 @@ The MVP is intentionally minimal. It is not a task tracker, issue tracker, or op
 
 Use the canvas to prepare and review a client-facing change request package.
 
-The seeded example is `GGR-5534 Help Center Change Request`, which shows:
+The live demo starts with no saved projects. Users create a project from the
+template picker, which shows:
 
 - A central project contract and surrounding nodes that each use one large editable content body with lightweight metadata such as title, tags, update time, and relationships.
-- Jira and Confluence source snapshots.
+- Request and planning source snapshots.
 - A Figma reference link.
 - Requirement nodes for access, content, support submission, and client CR output.
 - Edges that show which sources support the contract and requirements.
@@ -103,7 +104,7 @@ single content body when useful.
 - AI analysis endpoint.
 - Chat-style analysis history.
 - MCP canvas context tools for coding agents.
-- Seeded `GGR-5534` change request example.
+- Template-based project creation from an empty project list.
 - Backend e2e test coverage.
 
 ## Out Of Scope
@@ -227,7 +228,7 @@ Experimental MCP resources:
 | Contract changes visibly flag affected nodes. | Pass |
 | Flagged nodes can ask AI for an update plan without automatic mutation. | Pass |
 | Existing older local SQLite DBs migrate on startup. | Pass |
-| The seeded `GGR-5534` example loads from the database. | Pass |
+| A fresh database can start empty and create projects from templates. | Pass |
 | Backend e2e tests pass without unit tests or mocks. | Pass |
 
 ## Verification

@@ -13,8 +13,8 @@ def demo_snapshot() -> CanvasSnapshot:
     now = "2026-05-14T00:00:00.000Z"
     project = Project(
         id="project_demo_context_canvas",
-        name="GGR-5534 Help Center Change Request",
-        description="Client-ready change request contract with Jira, estimate, and design citations.",
+        name="Help Center Change Request",
+        description="Client-ready change request contract with request, estimate, and design citations.",
         createdAt=now,
         updatedAt=now,
         viewport={"x": 120, "y": 90, "zoom": 0.82},
@@ -23,7 +23,7 @@ def demo_snapshot() -> CanvasSnapshot:
         _node(
             "node_contract",
             "project_contract",
-            "GGR-5534 Help Center CR Contract",
+            "Help Center CR Contract",
             80,
             80,
             {
@@ -48,19 +48,19 @@ def demo_snapshot() -> CanvasSnapshot:
         _node(
             "node_jira_source",
             "source_snapshot",
-            "Jira GGR-5534",
+            "Help Center Request",
             -300,
             -20,
             {
                 "content": (
-                    "https://gogira-platform.atlassian.net/browse/GGR-5534\n\n"
+                    "https://example.com/issues/HELP-1001\n\n"
                     "Estimation Request for Help Center Feature Implementation. The request asks for effort "
                     "estimation to support a Change Request proposal for Help Center access, FAQ, content, "
                     "contact support, submission feedback, backend/content management, and non-functional "
                     "considerations.\n\n"
                     "Primary request source. Defines the Help Center estimation scope and requires frontend, "
                     "backend, QA, assumptions, dependencies, integration points, and CR-ready output.\n\n"
-                    "issueType=Story; status=DEV COMPLETE; priority=Medium"
+                    "issueType=Story; status=Ready for estimate; priority=Medium"
                 ),
             },
             now,
@@ -74,13 +74,13 @@ def demo_snapshot() -> CanvasSnapshot:
             300,
             {
                 "content": (
-                    "https://gogira-platform.atlassian.net/wiki/spaces/GoGira/pages/452067329/Support+Feedback+Estimate\n\n"
+                    "https://example.com/docs/support-feedback-estimate\n\n"
                     "Estimate page includes Help Center access, landing and search shell, FAQ module, "
                     "Multimedia Content & Tips, Contact Support form, content setup, integration polish, "
                     "QA/UAT, and workstream-level frontend/backend effort.\n\n"
                     "Planning source for the CR estimate. Current page frames Help Center as 3-4 calendar "
                     "weeks in addition to broader Support & Feedback work.\n\n"
-                    "space=GoGira; pageTitle=Support & Feedback Estimate"
+                    "space=Client Workspace; pageTitle=Support & Feedback Estimate"
                 ),
             },
             now,
@@ -94,9 +94,8 @@ def demo_snapshot() -> CanvasSnapshot:
             -160,
             {
                 "content": (
-                    "https://www.figma.com/design/a881lyhzKFF92802CCIuwR/GoGira---School"
-                    "?node-id=3255-38085&t=KKkxU4MN61j1iX34-4\n\n"
-                    "Design reference cited by GGR-5534 acceptance criteria."
+                    "https://example.com/designs/help-center-reference\n\n"
+                    "Design reference cited by the Help Center acceptance criteria."
                 ),
             },
             now,

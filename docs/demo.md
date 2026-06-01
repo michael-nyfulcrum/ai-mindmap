@@ -40,47 +40,52 @@ Use this flow when presenting the hosted demo. The goal is to show that Context
 Canvas is both the project workspace and the context source that AI agents can
 trust.
 
-1. Open the live demo and start from the seeded project.
+1. Open the live demo and create a project from a template.
+   - Say: "The demo starts clean, then we create a realistic project from a
+     template so the audience can see the setup path."
+   - Choose a template from the project picker and open the generated canvas.
+
+2. Inspect the generated project map.
    - Say: "This is the shared project map. It keeps contracts, requirements,
      sources, and decisions connected instead of scattering them across docs and
      chat threads."
    - Point out the contract, requirement, source, note, link, and image nodes.
 
-2. Create or inspect a requirement node.
+3. Create or inspect a requirement node.
    - Show that requirements are first-class project objects, not just text in a
      document.
    - Open the inspector and highlight the title, content, source metadata, and
      relationships.
 
-3. Connect the requirement to a source or contract.
+4. Connect the requirement to a source or contract.
    - Say: "The edge matters because this tells the system what depends on what.
      When a requirement changes, the canvas knows where to look for downstream
      impact."
 
-4. Edit a requirement or contract.
+5. Edit a requirement or contract.
    - Make a small but meaningful wording change, such as changing acceptance
      criteria or scope.
    - Save the change and show the version history or before/after diff.
 
-5. Show impact analysis and badges.
+6. Show impact analysis and badges.
    - Point out that only affected nodes are flagged.
    - Say: "This is the difference between a smart project map and a pile of
      documents. The system narrows the review surface instead of asking the team
      to reread everything."
 
-6. Use AI chat against the canvas.
+7. Use AI chat against the canvas.
    - Ask a question like: "Which requirements are affected by the latest
      contract change?"
    - Highlight that answers cite saved canvas context rather than guessing from
      loose prompt text.
 
-7. Open the Developer Handoff panel.
+8. Open the Developer Handoff panel.
    - Show the MCP endpoint and setup instructions.
    - Say: "The same context a product person sees here is what an AI coding
      agent can read through MCP. The agent starts from the current project truth,
      not from stale assumptions in the codebase."
 
-8. Close with the deployment point.
+9. Close with the deployment point.
    - Say: "This is not glued to a proprietary hosting workflow. The demo runs as
      standard Docker services with Caddy, SQLite, and a normal Linux server."
 
