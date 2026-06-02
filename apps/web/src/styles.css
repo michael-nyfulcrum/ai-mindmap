@@ -36,6 +36,37 @@
   box-sizing: border-box;
 }
 
+/* Sleek, theme-matched scrollbars across the app. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 16%) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(255 255 255 / 14%);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(255 255 255 / 26%);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -1979,17 +2010,20 @@ button:disabled {
 .suggestion-review {
   position: fixed;
   left: 84px;
-  top: 76px;
-  bottom: 16px;
+  top: 84px;
   z-index: 45;
-  width: min(380px, calc(100vw - 120px));
+  width: min(400px, calc(100vw - 120px));
+  max-height: min(72vh, calc(100vh - 120px));
   display: flex;
   flex-direction: column;
-  border: 1px solid rgb(63 196 107 / 30%);
-  border-radius: 14px;
-  background: #0d1625;
-  box-shadow: 0 24px 70px rgb(0 0 0 / 56%);
-  animation: scale-fade-in 200ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  border: 1px solid rgb(63 196 107 / 40%);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #112038 0%, #0d1625 60%);
+  box-shadow:
+    0 0 0 1px rgb(63 196 107 / 16%),
+    0 28px 80px rgb(0 0 0 / 60%),
+    0 0 60px rgb(63 196 107 / 16%);
+  animation: scale-fade-in 220ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
   overflow: hidden;
 }
 
@@ -1997,21 +2031,41 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px 12px;
+  padding: 14px 16px;
   border-bottom: 1px solid rgb(255 255 255 / 8%);
+  background: rgb(63 196 107 / 9%);
 }
 
 .suggestion-review-title {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 750;
-  color: #e6f6ec;
+  gap: 11px;
 }
 
-.suggestion-review-title svg {
-  color: #3fc46b;
+.suggestion-review-orb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  color: #06210f;
+  background: linear-gradient(135deg, #54d77f, #1f9d52);
+  box-shadow: 0 0 18px rgb(63 196 107 / 50%);
+}
+
+.suggestion-review-title strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 750;
+  color: #eafff1;
+  line-height: 1.2;
+}
+
+.suggestion-review-sub {
+  font-size: 12px;
+  color: rgb(255 255 255 / 52%);
 }
 
 .suggestion-review-close {
@@ -2041,9 +2095,100 @@ button:disabled {
 }
 
 .suggestion-review-empty {
-  padding: 24px 16px;
-  color: rgb(255 255 255 / 50%);
+  padding: 22px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  color: rgb(255 255 255 / 56%);
   font-size: 13px;
+}
+
+.suggestion-review-empty p {
+  margin: 0;
+}
+
+/* Loading state */
+.suggestion-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  padding: 30px 22px 26px;
+  text-align: center;
+}
+
+.suggestion-loading-orb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  color: #bff6d2;
+  background: radial-gradient(circle at 50% 38%, rgb(63 196 107 / 38%), rgb(63 196 107 / 5%));
+  box-shadow: 0 0 0 1px rgb(63 196 107 / 30%), 0 0 30px rgb(63 196 107 / 28%);
+  animation: suggestion-pulse 1.6s ease-in-out infinite;
+}
+
+.suggestion-loading-orb svg {
+  animation: sparkle-spin 4s linear infinite;
+}
+
+.suggestion-loading-title {
+  font-size: 15px;
+  font-weight: 750;
+  color: #eafff1;
+}
+
+.suggestion-loading-status {
+  font-size: 13px;
+  color: rgb(255 255 255 / 60%);
+  min-height: 18px;
+  animation: fade-in 300ms ease both;
+}
+
+.suggestion-skeletons {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.suggestion-skeleton {
+  height: 56px;
+  border-radius: 11px;
+  background: linear-gradient(
+    90deg,
+    rgb(255 255 255 / 5%) 25%,
+    rgb(255 255 255 / 12%) 37%,
+    rgb(255 255 255 / 5%) 63%
+  );
+  background-size: 400% 100%;
+  animation: suggestion-shimmer 1.4s ease infinite;
+}
+
+@keyframes suggestion-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes suggestion-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
 }
 
 .suggestion-review-list {

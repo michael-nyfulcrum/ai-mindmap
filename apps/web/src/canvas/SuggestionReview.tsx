@@ -1,10 +1,12 @@
+import { useEffect, useState } from "react";
 import { Check, Crosshair, GitBranch, Plus, Sparkles, X } from "lucide-react";
 import type { ProposedChange, SuggestionResponse } from "./canvasTypes";
 import { NODE_TYPE_LABELS } from "./canvasTypes";
 import { DiffStat, DiffView } from "./DiffView";
 
 type SuggestionReviewProps = {
-  proposal: SuggestionResponse;
+  proposal: SuggestionResponse | null;
+  isLoading: boolean;
   onAccept: (changeId: string) => void;
   onReject: (changeId: string) => void;
   onAcceptAll: () => void;
@@ -12,59 +14,105 @@ type SuggestionReviewProps = {
   onFocus: (change: ProposedChange) => void;
 };
 
+const LOADING_STEPS = [
+  "Reading your canvas…",
+  "Mapping requirements and gaps…",
+  "Drafting high-value changes…",
+  "Preparing a preview…",
+];
+
 export function SuggestionReview({
   proposal,
+  isLoading,
   onAccept,
   onReject,
   onAcceptAll,
   onDismiss,
   onFocus,
 }: SuggestionReviewProps) {
-  const count = proposal.changes.length;
+  const count = proposal?.changes.length ?? 0;
 
   return (
-    <aside className="suggestion-review" aria-label="AI suggestions">
+    <aside className="suggestion-review" aria-label="AI suggestions" aria-busy={isLoading}>
       <header className="suggestion-review-head">
         <div className="suggestion-review-title">
-          <Sparkles size={15} />
-          <span>AI suggestions</span>
+          <span className="suggestion-review-orb">
+            <Sparkles size={15} />
+          </span>
+          <div>
+            <strong>AI suggestions</strong>
+            <span className="suggestion-review-sub">
+              {isLoading ? "Thinking…" : count > 0 ? `${count} proposed change${count === 1 ? "" : "s"}` : "Review"}
+            </span>
+          </div>
         </div>
-        <button type="button" className="suggestion-review-close" onClick={onDismiss} aria-label="Dismiss suggestions">
-          <X size={16} />
-        </button>
+        {!isLoading ? (
+          <button type="button" className="suggestion-review-close" onClick={onDismiss} aria-label="Dismiss suggestions">
+            <X size={16} />
+          </button>
+        ) : null}
       </header>
 
-      <p className="suggestion-review-summary">{proposal.summary}</p>
-
-      {count === 0 ? (
+      {isLoading ? (
+        <LoadingBody />
+      ) : !proposal || count === 0 ? (
         <div className="suggestion-review-empty">
-          <p>No suggestions to review.</p>
+          <p>No suggestions for this canvas right now.</p>
+          <button type="button" className="suggestion-btn-ghost" onClick={onDismiss}>
+            Close
+          </button>
         </div>
       ) : (
-        <div className="suggestion-review-list">
-          {proposal.changes.map((change) => (
-            <SuggestionRow
-              key={change.id}
-              change={change}
-              onAccept={() => onAccept(change.id)}
-              onReject={() => onReject(change.id)}
-              onFocus={() => onFocus(change)}
-            />
-          ))}
-        </div>
+        <>
+          <p className="suggestion-review-summary">{proposal.summary}</p>
+          <div className="suggestion-review-list">
+            {proposal.changes.map((change) => (
+              <SuggestionRow
+                key={change.id}
+                change={change}
+                onAccept={() => onAccept(change.id)}
+                onReject={() => onReject(change.id)}
+                onFocus={() => onFocus(change)}
+              />
+            ))}
+          </div>
+          <footer className="suggestion-review-foot">
+            <button type="button" className="suggestion-btn-ghost" onClick={onDismiss}>
+              Dismiss all
+            </button>
+            <button type="button" className="suggestion-btn-accept-all" onClick={onAcceptAll}>
+              <Check size={14} /> Accept all ({count})
+            </button>
+          </footer>
+        </>
       )}
-
-      {count > 0 ? (
-        <footer className="suggestion-review-foot">
-          <button type="button" className="suggestion-btn-ghost" onClick={onDismiss}>
-            Dismiss all
-          </button>
-          <button type="button" className="suggestion-btn-accept-all" onClick={onAcceptAll}>
-            <Check size={14} /> Accept all ({count})
-          </button>
-        </footer>
-      ) : null}
     </aside>
+  );
+}
+
+function LoadingBody() {
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setStep((current) => (current + 1) % LOADING_STEPS.length);
+    }, 1400);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="suggestion-loading">
+      <div className="suggestion-loading-orb">
+        <Sparkles size={22} />
+      </div>
+      <strong className="suggestion-loading-title">Analyzing your canvas</strong>
+      <span className="suggestion-loading-status">{LOADING_STEPS[step]}</span>
+      <div className="suggestion-skeletons" aria-hidden="true">
+        <span className="suggestion-skeleton" />
+        <span className="suggestion-skeleton" />
+        <span className="suggestion-skeleton" />
+      </div>
+    </div>
   );
 }
 

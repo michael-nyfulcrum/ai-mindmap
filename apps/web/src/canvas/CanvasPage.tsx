@@ -1075,9 +1075,10 @@ export function CanvasPage() {
         activeItemCount={activeNodeIds.length + activeEdgeIds.length}
       />
 
-      {proposal ? (
+      {proposal || isSuggesting ? (
         <SuggestionReview
           proposal={proposal}
+          isLoading={isSuggesting && !proposal}
           onAccept={acceptChange}
           onReject={rejectChange}
           onAcceptAll={acceptAllChanges}
