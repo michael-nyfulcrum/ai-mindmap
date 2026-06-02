@@ -44,8 +44,10 @@ import {
 } from "../api/canvasApi";
 import { layoutGraph } from "./autoLayout";
 import { SuggestionReview } from "./SuggestionReview";
+import { toast } from "../shared/toast";
 import {
   defaultFieldsForType,
+  titleForType,
   type CanvasFlowEdge,
   type CanvasFlowNode,
   type CanvasNodeData,
@@ -58,6 +60,7 @@ import {
 } from "./canvasTypes";
 import { ContextNode } from "./nodes/ContextNode";
 import { Button } from "../shared/ui/Button";
+import { Spinner } from "../shared/ui/Spinner";
 import { createId } from "../shared/ids";
 import { nowIso } from "../shared/time";
 import { PROJECT_TEMPLATES } from "./projectTemplates";
@@ -209,7 +212,7 @@ export function CanvasPage() {
   }, []);
 
   const persist = useCallback(
-    async (options?: { nodes?: CanvasFlowNode[]; commitMessage?: string }) => {
+    async (options?: { nodes?: CanvasFlowNode[]; commitMessage?: string }): Promise<boolean> => {
       const {
         project: currentProject,
         nodes: snapshotNodes,
@@ -217,7 +220,7 @@ export function CanvasPage() {
       } = snapshotRef.current;
       const currentNodes = options?.nodes ?? snapshotNodes;
       if (!currentProject.id) {
-        return;
+        return false;
       }
       const updatedProject = {
         ...currentProject,
@@ -236,9 +239,11 @@ export function CanvasPage() {
         setNodes(saved.nodes);
         setEdges(saved.edges);
         setSaveState("saved");
+        return true;
       } catch {
         dirtyRef.current = true;
         setSaveState("error");
+        return false;
       }
     },
     [setEdges, setNodes],
@@ -307,6 +312,7 @@ export function CanvasPage() {
       setActiveNodeIds([id]);
       setActiveEdgeIds([]);
       setIsInspectorCollapsed(false);
+      toast.success(`${titleForType(type)} node added to the canvas`, "canvas-mutate");
     },
     [screenToFlowPosition, setNodes],
   );
@@ -423,7 +429,13 @@ export function CanvasPage() {
     async (nodeId: string, data: CanvasNodeData, commitMessage: string) => {
       const nextNodes = snapshotRef.current.nodes.map((node) => (node.id === nodeId ? { ...node, data } : node));
       setNodes(nextNodes);
-      await persist({ nodes: nextNodes, commitMessage: commitMessage || undefined });
+      toast.loading("Etching changes into the canvas…", "save-node");
+      const ok = await persist({ nodes: nextNodes, commitMessage: commitMessage || undefined });
+      if (ok) {
+        toast.success("Saved — a new version is logged ✓", "save-node");
+      } else {
+        toast.error("Signal lost — changes weren’t saved", "save-node");
+      }
     },
     [persist, setNodes],
   );
@@ -431,6 +443,7 @@ export function CanvasPage() {
   const deleteActiveItems = useCallback(() => {
     const nodeIds = new Set(activeNodeIds);
     const edgeIds = new Set(activeEdgeIds);
+    const removed = activeNodeIds.length + activeEdgeIds.length;
     dirtyRef.current = true;
     setNodes((current) => current.filter((node) => !nodeIds.has(node.id)));
     setEdges((current) =>
@@ -439,6 +452,9 @@ export function CanvasPage() {
     setActiveNodeIds([]);
     setActiveEdgeIds([]);
     setIsInspectorCollapsed(false);
+    if (removed > 0) {
+      toast.success(`Dissolved ${removed} item${removed === 1 ? "" : "s"} from the canvas`, "canvas-mutate");
+    }
   }, [activeEdgeIds, activeNodeIds, setEdges, setNodes]);
 
   const sendCanvasMessage = useCallback(async (content: string) => {
@@ -462,13 +478,16 @@ export function CanvasPage() {
 
     const messageContent = content.trim();
     setIsSending(true);
+    toast.loading("Consulting the neural core…", "chat");
     try {
       const result = await sendChatMessage({ projectId: project.id, chatId, content: messageContent });
       setChats((current) => [result.thread, ...current.filter((chat) => chat.id !== result.thread.id)]);
       setMessages(result.messages);
+      toast.success("The AI has answered ✓", "chat");
     } catch {
       setQuestion(messageContent);
       setSaveState("error");
+      toast.error("The neural core went quiet — try again", "chat");
     } finally {
       setIsSending(false);
     }
@@ -742,8 +761,17 @@ export function CanvasPage() {
         if (targetNodeId) {
           focusNode(targetNodeId);
         }
+        if (result.changes.length === 0) {
+          toast.success("Canvas looks solid — no changes to suggest", "suggest");
+        } else {
+          toast.success(
+            `${result.changes.length} idea${result.changes.length === 1 ? "" : "s"} ready to review ✨`,
+            "suggest",
+          );
+        }
       } catch {
         setSaveState("error");
+        toast.error("The AI couldn’t reach the canvas — try again", "suggest");
       } finally {
         setIsSuggesting(false);
       }
@@ -868,10 +896,18 @@ export function CanvasPage() {
     [focusNode, ghostPositions, setCenter],
   );
 
-  const acceptChange = useCallback((changeId: string) => applyAcceptance([changeId]), [applyAcceptance]);
+  const acceptChange = useCallback(
+    (changeId: string) => {
+      applyAcceptance([changeId]);
+      toast.success("Suggestion woven into the canvas ✓", "suggest-apply");
+    },
+    [applyAcceptance],
+  );
   const acceptAllChanges = useCallback(() => {
     if (proposal) {
+      const count = proposal.changes.length;
       applyAcceptance(proposal.changes.map((change) => change.id));
+      toast.success(`${count} suggestion${count === 1 ? "" : "s"} woven in ✓`, "suggest-apply");
     }
   }, [applyAcceptance, proposal]);
   const dismissProposal = useCallback(() => setProposal(null), []);
@@ -967,16 +1003,20 @@ export function CanvasPage() {
           </h1>
           {project.description ? <p>{project.description}</p> : null}
         </div>
-        <div className="save-state">
-          <Circle size={8} fill="currentColor" />
+        <div className={`save-state save-state-${saveState}`}>
+          {saveState === "saving" || saveState === "loading" ? (
+            <Spinner size={11} />
+          ) : (
+            <Circle size={8} fill="currentColor" />
+          )}
           <span>
             {saveState === "loading"
-              ? "Loading…"
+              ? "Syncing…"
               : saveState === "saving"
-                ? "Saving…"
+                ? "Syncing to the canvas…"
                 : saveState === "error"
                   ? "Couldn’t save"
-                  : "All saved"}
+                  : "All synced"}
           </span>
           <Button icon={<Plug size={14} />} variant="ghost" onClick={() => setIsConnectOpen(true)}>
             Connect
