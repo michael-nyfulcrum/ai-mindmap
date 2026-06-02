@@ -84,6 +84,34 @@ class ContractChangeVersion(BaseModel):
     createdAt: str
 
 
+class ProposedChange(BaseModel):
+    id: str
+    op: Literal["add_node", "add_edge", "update_node"]
+    rationale: str = ""
+    # add_node
+    nodeKey: str | None = None
+    nodeType: CanvasNodeType | None = None
+    title: str | None = None
+    content: str | None = None
+    tags: list[str] = Field(default_factory=list)
+    anchorNodeId: str | None = None
+    # add_edge
+    sourceRef: str | None = None
+    targetRef: str | None = None
+    relationship: str | None = None
+    # update_node
+    nodeId: str | None = None
+    titleBefore: str | None = None
+    titleAfter: str | None = None
+    contentBefore: str | None = None
+    contentAfter: str | None = None
+
+
+class SuggestionResponse(BaseModel):
+    summary: str = ""
+    changes: list[ProposedChange] = Field(default_factory=list)
+
+
 class ChatThread(BaseModel):
     id: str
     projectId: str

@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 from context_canvas_api.analyzer import AIProviderError, analyze_canvas, chat_with_canvas
 from context_canvas_api.db import AppDatabase, database_path
 from context_canvas_api.generator import generate_canvas
+from context_canvas_api.suggester import suggest_canvas_changes
 from context_canvas_api.demo import utc_now
 from context_canvas_api.env import ai_configuration_status, load_project_dotenv
 from context_canvas_api.models import CanvasSnapshot
@@ -45,6 +46,11 @@ class GenerateProjectRequest(BaseModel):
         if not normalized:
             raise ValueError("Prompt is required")
         return normalized
+
+
+class SuggestRequest(BaseModel):
+    targetNodeId: str | None = None
+    instruction: str | None = None
 
 
 class AnalyzeRequest(BaseModel):
@@ -292,6 +298,17 @@ def create_app(
             raise HTTPException(status_code=502, detail=str(exc)) from exc
         db.save_analysis_run(project_id, payload.question, analysis)
         return analysis.model_dump()
+
+    @app.post("/api/projects/{project_id}/suggest")
+    def suggest(project_id: str, payload: SuggestRequest, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
+        snapshot = db.get_snapshot(project_id)
+        if not snapshot:
+            raise HTTPException(status_code=404, detail="Project not found")
+        try:
+            suggestions = suggest_canvas_changes(snapshot, payload.targetNodeId, payload.instruction)
+        except AIProviderError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return suggestions.model_dump()
 
     @app.get("/api/projects/{project_id}/chats")
     def list_chats(project_id: str, db: AppDatabase = Depends(_db)) -> dict[str, Any]:

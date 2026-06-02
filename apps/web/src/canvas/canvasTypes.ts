@@ -17,6 +17,8 @@ export type CanvasNodeData = {
   tags: string[];
   updatedAt: string;
   highlighted?: boolean;
+  proposed?: "add" | "update";
+  rationale?: string;
   audit?: AuditMetadata;
   impact?: ChangeImpact;
 };
@@ -61,6 +63,34 @@ export type AnalysisResponse = {
 };
 
 export type ImpactStatus = "review" | "outdated" | "needs_update" | "conflict";
+
+export type ProposedChange = {
+  id: string;
+  op: "add_node" | "add_edge" | "update_node";
+  rationale: string;
+  // add_node
+  nodeKey?: string;
+  nodeType?: CanvasNodeType;
+  title?: string;
+  content?: string;
+  tags?: string[];
+  anchorNodeId?: string | null;
+  // add_edge
+  sourceRef?: string;
+  targetRef?: string;
+  relationship?: string;
+  // update_node
+  nodeId?: string;
+  titleBefore?: string | null;
+  titleAfter?: string | null;
+  contentBefore?: string | null;
+  contentAfter?: string | null;
+};
+
+export type SuggestionResponse = {
+  summary: string;
+  changes: ProposedChange[];
+};
 
 export type AuditMetadata = {
   createdAt: string;

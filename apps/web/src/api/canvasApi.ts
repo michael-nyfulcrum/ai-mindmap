@@ -1,4 +1,4 @@
-import type { AnalysisResponse, CanvasProject, CanvasSnapshot, ChatMessage, ChatThread, ContractChangeVersion } from "../canvas/canvasTypes";
+import type { AnalysisResponse, CanvasProject, CanvasSnapshot, ChatMessage, ChatThread, ContractChangeVersion, SuggestionResponse } from "../canvas/canvasTypes";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -106,6 +106,19 @@ export async function analyzeCanvas(input: { projectId: string; question: string
   }
 
   return (await response.json()) as AnalysisResponse;
+}
+
+export async function suggestChanges(input: { projectId: string; targetNodeId?: string; instruction?: string }) {
+  const response = await fetch(`${API_BASE_URL}/api/projects/${input.projectId}/suggest`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ targetNodeId: input.targetNodeId ?? null, instruction: input.instruction ?? null }),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to get suggestions");
+  }
+
+  return (await response.json()) as SuggestionResponse;
 }
 
 export async function listNodeVersions(input: { projectId: string; nodeId: string }) {

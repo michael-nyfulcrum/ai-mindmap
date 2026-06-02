@@ -1942,6 +1942,289 @@ button:disabled {
   color: #ff9b9b;
 }
 
+/* Proposed (ghost) nodes — preview only, awaiting approval. */
+.context-node.is-proposed {
+  opacity: 0.92;
+  border-style: dashed;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 28%);
+}
+
+.context-node.proposed-add {
+  border-color: rgb(63 196 107 / 80%);
+  border-top-color: #3fc46b;
+}
+
+.context-node.proposed-update {
+  border-color: rgb(240 167 41 / 85%);
+  border-top-color: #f0a429;
+}
+
+.context-node-proposed-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #06210f;
+  background: #3fc46b;
+}
+
+.context-node.proposed-update .context-node-proposed-badge {
+  color: #2a1c02;
+  background: #f0a429;
+}
+
+.react-flow__edge.proposed-edge .react-flow__edge-path {
+  stroke: #3fc46b;
+  stroke-dasharray: 6 4;
+  stroke-width: 2;
+}
+
+.react-flow__edge.proposed-edge .react-flow__edge-text {
+  fill: #9fe9b8;
+}
+
+.inspector-alert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* AI suggestion review panel. */
+.suggestion-review {
+  position: fixed;
+  left: 84px;
+  top: 76px;
+  bottom: 16px;
+  z-index: 45;
+  width: min(380px, calc(100vw - 120px));
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgb(63 196 107 / 30%);
+  border-radius: 14px;
+  background: #0d1625;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 56%);
+  animation: scale-fade-in 200ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  overflow: hidden;
+}
+
+.suggestion-review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+
+.suggestion-review-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 750;
+  color: #e6f6ec;
+}
+
+.suggestion-review-title svg {
+  color: #3fc46b;
+}
+
+.suggestion-review-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 6%);
+  color: rgb(255 255 255 / 52%);
+  cursor: pointer;
+}
+
+.suggestion-review-close:hover {
+  background: rgb(255 255 255 / 12%);
+  color: #ffffff;
+}
+
+.suggestion-review-summary {
+  margin: 0;
+  padding: 12px 16px 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgb(255 255 255 / 66%);
+}
+
+.suggestion-review-empty {
+  padding: 24px 16px;
+  color: rgb(255 255 255 / 50%);
+  font-size: 13px;
+}
+
+.suggestion-review-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.suggestion-row {
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 11px;
+  background: rgb(255 255 255 / 3%);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.suggestion-row-add {
+  border-left: 3px solid #3fc46b;
+}
+
+.suggestion-row-update {
+  border-left: 3px solid #f0a429;
+}
+
+.suggestion-row-add_edge {
+  border-left: 3px solid #4a9eff;
+}
+
+.suggestion-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+
+.suggestion-row-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 7%);
+  color: #cfe9d6;
+}
+
+.suggestion-row-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.suggestion-row-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: rgb(255 255 255 / 44%);
+}
+
+.suggestion-row-name {
+  font-size: 13px;
+  font-weight: 650;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suggestion-row-focus {
+  color: rgb(255 255 255 / 36%);
+  flex-shrink: 0;
+}
+
+.suggestion-row-rationale {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgb(255 255 255 / 58%);
+}
+
+.suggestion-row-diff {
+  border-top: 1px solid rgb(255 255 255 / 8%);
+  padding-top: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.suggestion-row-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.suggestion-row-actions button,
+.suggestion-review-foot button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.suggestion-btn-reject {
+  background: transparent;
+  border-color: rgb(255 255 255 / 14%);
+  color: rgb(255 255 255 / 62%);
+}
+
+.suggestion-btn-reject:hover {
+  background: rgb(217 79 79 / 18%);
+  color: #ff9b9b;
+}
+
+.suggestion-btn-accept,
+.suggestion-btn-accept-all {
+  background: #3fc46b;
+  color: #06210f;
+}
+
+.suggestion-btn-accept:hover,
+.suggestion-btn-accept-all:hover {
+  background: #54d77f;
+}
+
+.suggestion-review-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+}
+
+.suggestion-btn-ghost {
+  background: transparent;
+  border: 1px solid rgb(255 255 255 / 14%) !important;
+  color: rgb(255 255 255 / 60%);
+}
+
+.suggestion-btn-ghost:hover {
+  background: rgb(255 255 255 / 8%);
+  color: #ffffff;
+}
+
 .context-node::before {
   position: absolute;
   inset: 0;

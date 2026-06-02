@@ -39,9 +39,11 @@ import {
   renameProject,
   saveCanvas,
   sendChatMessage,
+  suggestChanges,
   uploadAsset,
 } from "../api/canvasApi";
 import { layoutGraph } from "./autoLayout";
+import { SuggestionReview } from "./SuggestionReview";
 import {
   defaultFieldsForType,
   type CanvasFlowEdge,
@@ -51,6 +53,8 @@ import {
   type CanvasProject,
   type ChatMessage,
   type ChatThread,
+  type ProposedChange,
+  type SuggestionResponse,
 } from "./canvasTypes";
 import { ContextNode } from "./nodes/ContextNode";
 import { Button } from "../shared/ui/Button";
@@ -91,6 +95,9 @@ export function CanvasPage() {
   const [isInspectorCollapsed, setIsInspectorCollapsed] = useState(false);
   const [isHandoffOpen, setIsHandoffOpen] = useState(false);
   const [isConnectOpen, setIsConnectOpen] = useState(false);
+  const [proposal, setProposal] = useState<SuggestionResponse | null>(null);
+  const [ghostPositions, setGhostPositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [isSuggesting, setIsSuggesting] = useState(false);
   const { fitView, screenToFlowPosition, getViewport, setCenter } = useReactFlow();
   const projectId = project.id;
   const snapshotRef = useRef({ project, nodes, edges });
@@ -106,16 +113,33 @@ export function CanvasPage() {
     () => new Set(nodes.filter((node) => node.data.impact).map((node) => node.id)),
     [nodes],
   );
-  const displayEdges = useMemo(
-    () =>
-      edges.map((edge) => ({
-        ...edge,
-        type: "default",
-        markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
-        animated: flaggedNodeIds.has(edge.source) || flaggedNodeIds.has(edge.target),
-      })),
-    [edges, flaggedNodeIds],
+  const committedNodeIds = useMemo(() => new Set(nodes.map((node) => node.id)), [nodes]);
+  const proposalView = useMemo(
+    () => buildProposalView(proposal, ghostPositions, committedNodeIds),
+    [proposal, ghostPositions, committedNodeIds],
   );
+
+  const displayNodes = useMemo(() => {
+    if (!proposal) {
+      return nodes;
+    }
+    const withRings = nodes.map((node) =>
+      proposalView.updateNodeIds.has(node.id)
+        ? { ...node, data: { ...node.data, proposed: "update" as const, rationale: proposalView.updateRationale.get(node.id) } }
+        : node,
+    );
+    return withRings.concat(proposalView.proposedNodes);
+  }, [nodes, proposal, proposalView]);
+
+  const displayEdges = useMemo(() => {
+    const committed = edges.map((edge) => ({
+      ...edge,
+      type: "default",
+      markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
+      animated: flaggedNodeIds.has(edge.source) || flaggedNodeIds.has(edge.target),
+    }));
+    return proposal ? [...committed, ...proposalView.proposedEdges] : committed;
+  }, [edges, flaggedNodeIds, proposal, proposalView]);
 
   useEffect(() => {
     snapshotRef.current = { project, nodes, edges };
@@ -235,10 +259,15 @@ export function CanvasPage() {
 
   const onNodesChange = useCallback(
     (changes: NodeChange<CanvasFlowNode>[]) => {
-      if (changes.some(nodeChangeAffectsPersistence)) {
+      // Drop changes targeting ghost/proposed nodes — they live outside committed state.
+      const committed = changes.filter((change) => !("id" in change && isProposedId(change.id)));
+      if (committed.length === 0) {
+        return;
+      }
+      if (committed.some(nodeChangeAffectsPersistence)) {
         dirtyRef.current = true;
       }
-      onNodesChangeBase(changes);
+      onNodesChangeBase(committed);
     },
     [onNodesChangeBase],
   );
@@ -697,6 +726,156 @@ export function CanvasPage() {
     window.requestAnimationFrame(() => fitView({ padding: 0.18, duration: 420 }));
   }, [fitView, setNodes]);
 
+  const requestSuggestions = useCallback(
+    async (targetNodeId?: string, instruction?: string) => {
+      if (!project.id || isSuggesting) {
+        return;
+      }
+      setIsSuggesting(true);
+      try {
+        await persist();
+        const result = await suggestChanges({ projectId: project.id, targetNodeId, instruction });
+        const centre = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+        setGhostPositions(computeGhostPositions(result, snapshotRef.current.nodes, centre));
+        setProposal(result);
+        setIsInspectorCollapsed(true);
+        if (targetNodeId) {
+          focusNode(targetNodeId);
+        }
+      } catch {
+        setSaveState("error");
+      } finally {
+        setIsSuggesting(false);
+      }
+    },
+    [focusNode, isSuggesting, persist, project.id, screenToFlowPosition],
+  );
+
+  const applyAcceptance = useCallback(
+    (changeIds: string[]) => {
+      const current = proposal;
+      if (!current) {
+        return;
+      }
+      const requested = new Set(changeIds);
+      const keyToNodeChange = new Map<string, ProposedChange>();
+      for (const change of current.changes) {
+        if (change.op === "add_node" && change.nodeKey) {
+          keyToNodeChange.set(change.nodeKey, change);
+        }
+      }
+      // Accepting an edge pulls in any still-proposed node it depends on.
+      const accepted = new Set(requested);
+      for (const change of current.changes) {
+        if (change.op === "add_edge" && requested.has(change.id)) {
+          for (const ref of [change.sourceRef, change.targetRef]) {
+            const dependency = ref ? keyToNodeChange.get(ref) : undefined;
+            if (dependency) {
+              accepted.add(dependency.id);
+            }
+          }
+        }
+      }
+
+      const now = nowIso();
+      let nextNodes = snapshotRef.current.nodes.slice();
+      for (const change of current.changes) {
+        if (change.op === "add_node" && accepted.has(change.id)) {
+          nextNodes.push(committedNodeFromChange(change, ghostPositions, now));
+        }
+      }
+      for (const change of current.changes) {
+        if (change.op === "update_node" && accepted.has(change.id)) {
+          nextNodes = nextNodes.map((node) =>
+            node.id === change.nodeId
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    title: change.titleAfter ?? node.data.title,
+                    fields: { ...node.data.fields, content: change.contentAfter ?? node.data.fields.content },
+                    updatedAt: now,
+                  },
+                }
+              : node,
+          );
+        }
+      }
+
+      const committedIds = new Set(nextNodes.map((node) => node.id));
+      const keyToId = new Map<string, string>();
+      for (const change of current.changes) {
+        if (change.op === "add_node" && change.nodeKey) {
+          keyToId.set(change.nodeKey, ghostIdFor(change));
+        }
+      }
+      const nextEdges = snapshotRef.current.edges.slice();
+      for (const change of current.changes) {
+        if (change.op === "add_edge" && accepted.has(change.id)) {
+          const source = resolveRef(change.sourceRef, committedIds, keyToId);
+          const target = resolveRef(change.targetRef, committedIds, keyToId);
+          if (source && target && source !== target) {
+            const relationship = change.relationship ?? "references";
+            nextEdges.push({
+              id: createId("edge"),
+              type: "default",
+              source,
+              target,
+              label: relationship,
+              data: { relationship, updatedAt: now },
+            });
+          }
+        }
+      }
+
+      setNodes(nextNodes);
+      setEdges(nextEdges);
+      dirtyRef.current = true;
+
+      const remaining = current.changes.filter((change) => !accepted.has(change.id));
+      setProposal(remaining.length ? { ...current, changes: remaining } : null);
+    },
+    [ghostPositions, proposal, setEdges, setNodes],
+  );
+
+  const rejectChange = useCallback((changeId: string) => {
+    setProposal((current) => {
+      if (!current) {
+        return current;
+      }
+      const remaining = current.changes.filter((change) => change.id !== changeId);
+      return remaining.length ? { ...current, changes: remaining } : null;
+    });
+  }, []);
+
+  const focusChange = useCallback(
+    (change: ProposedChange) => {
+      if (change.op === "update_node" && change.nodeId) {
+        focusNode(change.nodeId);
+        return;
+      }
+      if (change.op === "add_node" && change.nodeKey) {
+        const position = ghostPositions[change.nodeKey];
+        if (position) {
+          setCenter(position.x + 140, position.y + 80, { zoom: 1, duration: 300 });
+        }
+        return;
+      }
+      if (change.op === "add_edge" && change.sourceRef) {
+        focusNode(change.sourceRef);
+      }
+    },
+    [focusNode, ghostPositions, setCenter],
+  );
+
+  const acceptChange = useCallback((changeId: string) => applyAcceptance([changeId]), [applyAcceptance]);
+  const acceptAllChanges = useCallback(() => {
+    if (proposal) {
+      applyAcceptance(proposal.changes.map((change) => change.id));
+    }
+  }, [applyAcceptance, proposal]);
+  const dismissProposal = useCallback(() => setProposal(null), []);
+
   const handleRenameProject = useCallback(
     async (targetProjectId: string, name: string) => {
       try {
@@ -814,7 +993,7 @@ export function CanvasPage() {
       <section className="flow-region">
         <GalaxyBackground />
         <ReactFlow
-          nodes={nodes}
+          nodes={displayNodes}
           edges={displayEdges}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
@@ -848,8 +1027,10 @@ export function CanvasPage() {
           projectId={project.id}
           activeNode={selectedNode}
           saveState={saveState}
+          isSuggesting={isSuggesting}
           onSaveNode={saveNodeVersion}
           onRequestImpactPlan={requestImpactPlan}
+          onRequestSuggestions={(nodeId, instruction) => void requestSuggestions(nodeId, instruction)}
           onCollapse={() => setIsInspectorCollapsed(true)}
         />
       ) : null}
@@ -886,11 +1067,24 @@ export function CanvasPage() {
         onFitView={() => fitView({ padding: 0.18 })}
         onAutoArrange={autoArrangeNodes}
         onExportImage={exportCanvasImage}
+        onSuggest={() => void requestSuggestions()}
+        isSuggesting={isSuggesting}
         onSave={() => void persist()}
         onLoadDemo={() => void handleLoadDemo()}
         onDeleteItems={deleteActiveItems}
         activeItemCount={activeNodeIds.length + activeEdgeIds.length}
       />
+
+      {proposal ? (
+        <SuggestionReview
+          proposal={proposal}
+          onAccept={acceptChange}
+          onReject={rejectChange}
+          onAcceptAll={acceptAllChanges}
+          onDismiss={dismissProposal}
+          onFocus={focusChange}
+        />
+      ) : null}
 
       {isConnectOpen ? (
         <ConnectAgentModal project={project} onClose={() => setIsConnectOpen(false)} />
@@ -919,6 +1113,158 @@ const MINIMAP_NODE_COLORS: Record<CanvasNodeType, string> = {
 
 function miniMapNodeColor(node: CanvasFlowNode) {
   return MINIMAP_NODE_COLORS[node.data.canvasType] ?? "#6aa6f8";
+}
+
+const GHOST_DX = 360;
+const GHOST_DY = 180;
+
+function isProposedId(id: unknown): boolean {
+  return typeof id === "string" && id.startsWith("proposed_");
+}
+
+function ghostIdFor(change: ProposedChange) {
+  return `proposed_${change.id}`;
+}
+
+function resolveRef(
+  ref: string | undefined,
+  committedIds: Set<string>,
+  keyToId: Map<string, string>,
+): string | null {
+  if (!ref) {
+    return null;
+  }
+  if (committedIds.has(ref)) {
+    return ref;
+  }
+  const mapped = keyToId.get(ref);
+  return mapped && committedIds.has(mapped) ? mapped : null;
+}
+
+function committedNodeFromChange(
+  change: ProposedChange,
+  positions: Record<string, { x: number; y: number }>,
+  timestamp: string,
+): CanvasFlowNode {
+  return {
+    id: ghostIdFor(change),
+    type: "contextNode",
+    position: positions[change.nodeKey ?? ""] ?? { x: 0, y: 0 },
+    data: {
+      canvasType: change.nodeType ?? "requirement",
+      title: change.title ?? "Untitled",
+      fields: { content: change.content ?? "" },
+      tags: change.tags ?? [],
+      updatedAt: timestamp,
+    },
+  };
+}
+
+function computeGhostPositions(
+  proposal: SuggestionResponse,
+  nodes: CanvasFlowNode[],
+  centre: { x: number; y: number },
+): Record<string, { x: number; y: number }> {
+  const byAnchor = new Map<string, ProposedChange[]>();
+  for (const change of proposal.changes) {
+    if (change.op !== "add_node" || !change.nodeKey) {
+      continue;
+    }
+    const anchor = change.anchorNodeId ?? "__none__";
+    byAnchor.set(anchor, [...(byAnchor.get(anchor) ?? []), change]);
+  }
+
+  const positions: Record<string, { x: number; y: number }> = {};
+  for (const [anchorId, group] of byAnchor) {
+    const anchorNode = nodes.find((node) => node.id === anchorId);
+    const baseX = anchorNode ? anchorNode.position.x + GHOST_DX : centre.x;
+    const baseY = anchorNode ? anchorNode.position.y : centre.y;
+    group.forEach((change, index) => {
+      positions[change.nodeKey as string] = {
+        x: baseX,
+        y: baseY + (index - (group.length - 1) / 2) * GHOST_DY,
+      };
+    });
+  }
+  return positions;
+}
+
+type ProposalView = {
+  proposedNodes: CanvasFlowNode[];
+  proposedEdges: CanvasFlowEdge[];
+  updateNodeIds: Set<string>;
+  updateRationale: Map<string, string>;
+};
+
+function buildProposalView(
+  proposal: SuggestionResponse | null,
+  positions: Record<string, { x: number; y: number }>,
+  committedNodeIds: Set<string>,
+): ProposalView {
+  const proposedNodes: CanvasFlowNode[] = [];
+  const proposedEdges: CanvasFlowEdge[] = [];
+  const updateNodeIds = new Set<string>();
+  const updateRationale = new Map<string, string>();
+  if (!proposal) {
+    return { proposedNodes, proposedEdges, updateNodeIds, updateRationale };
+  }
+
+  const keyToId = new Map<string, string>();
+  for (const change of proposal.changes) {
+    if (change.op === "add_node" && change.nodeKey) {
+      keyToId.set(change.nodeKey, ghostIdFor(change));
+    }
+  }
+  const ghostIds = new Set([...committedNodeIds, ...keyToId.values()]);
+
+  for (const change of proposal.changes) {
+    if (change.op === "add_node") {
+      proposedNodes.push({
+        id: ghostIdFor(change),
+        type: "contextNode",
+        position: positions[change.nodeKey ?? ""] ?? { x: 0, y: 0 },
+        draggable: false,
+        selectable: false,
+        data: {
+          canvasType: change.nodeType ?? "requirement",
+          title: change.title ?? "Untitled",
+          fields: { content: change.content ?? "" },
+          tags: change.tags ?? [],
+          updatedAt: "",
+          proposed: "add",
+          rationale: change.rationale,
+        },
+      });
+    } else if (change.op === "update_node" && change.nodeId) {
+      updateNodeIds.add(change.nodeId);
+      updateRationale.set(change.nodeId, change.rationale);
+    }
+  }
+
+  for (const change of proposal.changes) {
+    if (change.op !== "add_edge") {
+      continue;
+    }
+    const source = resolveRef(change.sourceRef, ghostIds, keyToId);
+    const target = resolveRef(change.targetRef, ghostIds, keyToId);
+    if (!source || !target || source === target) {
+      continue;
+    }
+    proposedEdges.push({
+      id: ghostIdFor(change),
+      type: "default",
+      source,
+      target,
+      label: change.relationship ?? "references",
+      selectable: false,
+      deletable: false,
+      animated: true,
+      className: "proposed-edge",
+      data: { relationship: change.relationship ?? "references", updatedAt: "" },
+    });
+  }
+
+  return { proposedNodes, proposedEdges, updateNodeIds, updateRationale };
 }
 
 function canvasPath(projectId: string) {

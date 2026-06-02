@@ -21,6 +21,7 @@ export const ContextNode = memo(function ContextNode({ id, data, selected }: Nod
   const { deleteElements, fitView } = useReactFlow();
 
   const impact = data.impact;
+  const proposed = data.proposed;
 
   return (
     <article
@@ -30,30 +31,34 @@ export const ContextNode = memo(function ContextNode({ id, data, selected }: Nod
         selected ? "is-active" : "",
         data.highlighted ? "is-highlighted" : "",
         impact ? `has-impact impact-${impact.status}` : "",
+        proposed ? `is-proposed proposed-${proposed}` : "",
       ]
         .filter(Boolean)
         .join(" ")}
     >
-      {data.canvasType === "project_contract" ? (
+      {proposed ? <span className="context-node-proposed-badge">Proposed</span> : null}
+      {!proposed && data.canvasType === "project_contract" ? (
         <NodeResizer isVisible={selected} minWidth={240} minHeight={140} lineClassName="context-node-resize-line" handleClassName="context-node-resize-handle" />
       ) : null}
-      <NodeToolbar isVisible={selected} position={Position.Top} className="node-toolbar-actions">
-        <button
-          type="button"
-          title="Focus node"
-          onClick={() => void fitView({ nodes: [{ id }], duration: 320, padding: 0.6 })}
-        >
-          <Crosshair size={14} />
-        </button>
-        <button
-          type="button"
-          title="Delete node"
-          className="node-toolbar-danger"
-          onClick={() => void deleteElements({ nodes: [{ id }] })}
-        >
-          <Trash2 size={14} />
-        </button>
-      </NodeToolbar>
+      {!proposed ? (
+        <NodeToolbar isVisible={selected} position={Position.Top} className="node-toolbar-actions">
+          <button
+            type="button"
+            title="Focus node"
+            onClick={() => void fitView({ nodes: [{ id }], duration: 320, padding: 0.6 })}
+          >
+            <Crosshair size={14} />
+          </button>
+          <button
+            type="button"
+            title="Delete node"
+            className="node-toolbar-danger"
+            onClick={() => void deleteElements({ nodes: [{ id }] })}
+          >
+            <Trash2 size={14} />
+          </button>
+        </NodeToolbar>
+      ) : null}
       <Handle type="target" position={Position.Left} />
       <header className="context-node-header">
         <span className="context-node-icon">

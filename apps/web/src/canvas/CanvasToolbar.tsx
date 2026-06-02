@@ -6,6 +6,7 @@ import {
   Download,
   FilePlus2,
   ImagePlus,
+  Lightbulb,
   Link,
   NotebookPen,
   Save,
@@ -22,6 +23,8 @@ type CanvasToolbarProps = {
   onFitView: () => void;
   onAutoArrange: () => void;
   onExportImage: () => void;
+  onSuggest: () => void;
+  isSuggesting: boolean;
   onSave: () => void;
   onLoadDemo: () => void;
   onDeleteItems: () => void;
@@ -42,6 +45,8 @@ export const CanvasToolbar = memo(function CanvasToolbar({
   onFitView,
   onAutoArrange,
   onExportImage,
+  onSuggest,
+  isSuggesting,
   onSave,
   onLoadDemo,
   onDeleteItems,
@@ -64,6 +69,13 @@ export const CanvasToolbar = memo(function CanvasToolbar({
       <div className="toolbar-group">
         <IconButton icon={<Scan size={18} />} label="Fit view" onClick={onFitView} />
         <IconButton icon={<Wand2 size={18} />} label="Auto-arrange" onClick={onAutoArrange} />
+        <IconButton
+          icon={<Lightbulb size={18} />}
+          label="AI suggest changes"
+          onClick={onSuggest}
+          disabled={isSuggesting}
+          className="toolbar-suggest-btn"
+        />
         <IconButton icon={<Download size={18} />} label="Export PNG" onClick={onExportImage} />
         <IconButton icon={<Save size={18} />} label="Save" onClick={onSave} />
         <IconButton
