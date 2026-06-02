@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Handle, NodeResizer, NodeToolbar, Position, useReactFlow, type NodeProps } from "@xyflow/react";
+import { Handle, NodeToolbar, Position, useReactFlow, type NodeProps } from "@xyflow/react";
 import { AlertCircle, CheckCircle2, Crosshair, FileText, Image, Link2, ScrollText, Trash2 } from "lucide-react";
 import type { CanvasFlowNode, CanvasNodeType, ImpactStatus } from "../canvasTypes";
 import { NODE_TYPE_LABELS } from "../canvasTypes";
@@ -37,9 +37,6 @@ export const ContextNode = memo(function ContextNode({ id, data, selected }: Nod
         .join(" ")}
     >
       {proposed ? <span className="context-node-proposed-badge">Proposed</span> : null}
-      {!proposed && data.canvasType === "project_contract" ? (
-        <NodeResizer isVisible={selected} minWidth={240} minHeight={140} lineClassName="context-node-resize-line" handleClassName="context-node-resize-handle" />
-      ) : null}
       {!proposed ? (
         <NodeToolbar isVisible={selected} position={Position.Top} className="node-toolbar-actions">
           <button

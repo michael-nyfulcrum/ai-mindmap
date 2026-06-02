@@ -1299,12 +1299,7 @@ function fileToDataUrl(file: File) {
 }
 
 function nodeChangeAffectsPersistence(change: NodeChange<CanvasFlowNode>) {
-  // Persist explicit user resizes (NodeResizer) but ignore initial measurement
-  // and selection changes so we don't save on every passive layout tick.
-  if (change.type === "dimensions") {
-    return Boolean(change.resizing);
-  }
-  return change.type !== "select";
+  return change.type !== "select" && change.type !== "dimensions";
 }
 
 function edgeChangeAffectsPersistence(change: EdgeChange<CanvasFlowEdge>) {
