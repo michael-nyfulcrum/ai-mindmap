@@ -76,14 +76,16 @@ export function SuggestionReview({
               />
             ))}
           </div>
-          <footer className="suggestion-review-foot">
-            <button type="button" className="suggestion-btn-ghost" onClick={onDismiss}>
-              Dismiss all
-            </button>
-            <button type="button" className="suggestion-btn-accept-all" onClick={onAcceptAll}>
-              <Check size={14} /> Accept all ({count})
-            </button>
-          </footer>
+          {count > 1 ? (
+            <footer className="suggestion-review-foot">
+              <button type="button" className="suggestion-btn-ghost" onClick={onDismiss}>
+                Dismiss all
+              </button>
+              <button type="button" className="suggestion-btn-accept-all" onClick={onAcceptAll}>
+                <Check size={14} /> Accept all ({count})
+              </button>
+            </footer>
+          ) : null}
         </>
       )}
     </aside>
