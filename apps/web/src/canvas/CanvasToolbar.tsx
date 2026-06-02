@@ -3,6 +3,7 @@ import {
   Brain,
   CheckSquare,
   Database,
+  Download,
   FilePlus2,
   ImagePlus,
   Link,
@@ -10,6 +11,7 @@ import {
   Save,
   Scan,
   Trash2,
+  Wand2,
 } from "lucide-react";
 import { Button } from "../shared/ui/Button";
 import { IconButton } from "../shared/ui/IconButton";
@@ -18,6 +20,8 @@ import type { CanvasNodeType } from "./canvasTypes";
 type CanvasToolbarProps = {
   onAddNode: (type: CanvasNodeType) => void;
   onFitView: () => void;
+  onAutoArrange: () => void;
+  onExportImage: () => void;
   onSave: () => void;
   onLoadDemo: () => void;
   onDeleteItems: () => void;
@@ -36,6 +40,8 @@ const nodeButtons: Array<{ type: CanvasNodeType; label: string; icon: React.Reac
 export const CanvasToolbar = memo(function CanvasToolbar({
   onAddNode,
   onFitView,
+  onAutoArrange,
+  onExportImage,
   onSave,
   onLoadDemo,
   onDeleteItems,
@@ -57,6 +63,8 @@ export const CanvasToolbar = memo(function CanvasToolbar({
       <div className="toolbar-sep" aria-hidden="true" />
       <div className="toolbar-group">
         <IconButton icon={<Scan size={18} />} label="Fit view" onClick={onFitView} />
+        <IconButton icon={<Wand2 size={18} />} label="Auto-arrange" onClick={onAutoArrange} />
+        <IconButton icon={<Download size={18} />} label="Export PNG" onClick={onExportImage} />
         <IconButton icon={<Save size={18} />} label="Save" onClick={onSave} />
         <IconButton
           icon={<Trash2 size={18} />}

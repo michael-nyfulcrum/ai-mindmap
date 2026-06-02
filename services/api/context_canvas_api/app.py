@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from context_canvas_api.analyzer import AIProviderError, analyze_canvas, chat_with_canvas
 from context_canvas_api.db import AppDatabase, database_path
+from context_canvas_api.generator import generate_canvas
 from context_canvas_api.demo import utc_now
 from context_canvas_api.env import ai_configuration_status, load_project_dotenv
 from context_canvas_api.models import CanvasSnapshot
@@ -32,6 +33,18 @@ class CreateProjectRequest(BaseModel):
     @classmethod
     def normalize_name(cls, value: str) -> str:
         return value.strip() or "Untitled canvas"
+
+
+class GenerateProjectRequest(BaseModel):
+    prompt: str = Field(min_length=1, max_length=2000)
+
+    @field_validator("prompt")
+    @classmethod
+    def normalize_prompt(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Prompt is required")
+        return normalized
 
 
 class AnalyzeRequest(BaseModel):
@@ -131,6 +144,13 @@ def create_app(
             edges=payload.edges,
             actor=_actor(request),
         ).model_dump()
+
+    @app.post("/api/projects/generate")
+    def generate_project(payload: GenerateProjectRequest) -> dict[str, Any]:
+        try:
+            return generate_canvas(payload.prompt)
+        except AIProviderError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     @app.get("/api/projects/{project_id}")
     def get_project(project_id: str, db: AppDatabase = Depends(_db)) -> dict[str, Any]:

@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, HelpCircle, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
-import { PROJECT_TEMPLATES } from "./projectTemplates";
+import { useState } from "react";
+import { Check, HelpCircle, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import type { CanvasProject } from "./canvasTypes";
 import { GalaxyBackground } from "./GalaxyBackground";
+import { NewProjectModal } from "./NewProjectModal";
 import { TutorialDialog } from "./TutorialDialog";
 
 type ProjectCarouselProps = {
@@ -11,6 +11,7 @@ type ProjectCarouselProps = {
   loadingLabel: string;
   onSelectProject: (projectId: string) => void;
   onCreateProject: (templateId?: string) => void;
+  onGenerateProject: (prompt: string) => void;
   onRenameProject: (projectId: string, name: string) => void;
   onDeleteProject: (projectId: string) => void;
 };
@@ -39,30 +40,12 @@ export function ProjectCarousel({
   loadingLabel,
   onSelectProject,
   onCreateProject,
+  onGenerateProject,
   onRenameProject,
   onDeleteProject,
 }: ProjectCarouselProps) {
   const [showTutorial, setShowTutorial] = useState(false);
-  const [showTemplateMenu, setShowTemplateMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!showTemplateMenu) return;
-    function handleOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowTemplateMenu(false);
-      }
-    }
-    function handleEscape(e: KeyboardEvent) {
-      if (e.key === "Escape") setShowTemplateMenu(false);
-    }
-    document.addEventListener("mousedown", handleOutside);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handleOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [showTemplateMenu]);
+  const [showNewProject, setShowNewProject] = useState(false);
 
   return (
     <>
@@ -83,52 +66,15 @@ export function ProjectCarousel({
               <HelpCircle size={15} />
               How it works
             </button>
-            <div className="project-picker-new-wrapper" ref={menuRef}>
-              <button
-                type="button"
-                className="project-picker-cta project-picker-cta-main"
-                onClick={() => {
-                  setShowTemplateMenu(false);
-                  onCreateProject();
-                }}
-                disabled={isLoading}
-              >
-                <Plus size={16} />
-                New Project
-              </button>
-              <button
-                type="button"
-                className="project-picker-cta project-picker-cta-chevron"
-                onClick={() => setShowTemplateMenu((v) => !v)}
-                disabled={isLoading}
-                aria-label="Choose template"
-                aria-expanded={showTemplateMenu}
-                aria-haspopup="menu"
-              >
-                <ChevronDown size={14} />
-              </button>
-
-              {showTemplateMenu && (
-                <div className="template-menu" role="menu">
-                  <div className="template-menu-heading">Start from template</div>
-                  {PROJECT_TEMPLATES.map((tpl) => (
-                    <button
-                      type="button"
-                      key={tpl.id}
-                      className="template-menu-item"
-                      role="menuitem"
-                      onClick={() => {
-                        onCreateProject(tpl.id);
-                        setShowTemplateMenu(false);
-                      }}
-                    >
-                      <strong>{tpl.name}</strong>
-                      <span>{tpl.description}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <button
+              type="button"
+              className="project-picker-cta"
+              onClick={() => setShowNewProject(true)}
+              disabled={isLoading}
+            >
+              <Plus size={16} />
+              New Project
+            </button>
           </div>
         </header>
 
@@ -136,7 +82,7 @@ export function ProjectCarousel({
           {projects.length === 0 && !isLoading ? (
             <div className="project-grid-empty">
               <p>No projects yet.</p>
-              <button type="button" className="project-picker-cta" onClick={() => onCreateProject()}>
+              <button type="button" className="project-picker-cta" onClick={() => setShowNewProject(true)}>
                 <Plus size={16} />
                 Create your first project
               </button>
@@ -163,6 +109,22 @@ export function ProjectCarousel({
           </div>
         ) : null}
       </main>
+
+      {showNewProject ? (
+        <NewProjectModal
+          isLoading={isLoading}
+          onClose={() => setShowNewProject(false)}
+          onGenerate={(prompt) => onGenerateProject(prompt)}
+          onCreateBlank={() => {
+            setShowNewProject(false);
+            onCreateProject();
+          }}
+          onCreateTemplate={(id) => {
+            setShowNewProject(false);
+            onCreateProject(id);
+          }}
+        />
+      ) : null}
 
       {showTutorial ? <TutorialDialog onClose={() => setShowTutorial(false)} /> : null}
     </>

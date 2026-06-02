@@ -42,6 +42,24 @@ export async function createProject(input: string | CreateProjectInput) {
   return (await response.json()) as CanvasSnapshot;
 }
 
+export async function generateProject(prompt: string) {
+  const response = await fetch(`${API_BASE_URL}/api/projects/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt }),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to generate project");
+  }
+
+  return (await response.json()) as {
+    projectName: string;
+    projectDescription: string;
+    nodes: CanvasSnapshot["nodes"];
+    edges: CanvasSnapshot["edges"];
+  };
+}
+
 export async function renameProject(projectId: string, name: string) {
   const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
     method: "PATCH",

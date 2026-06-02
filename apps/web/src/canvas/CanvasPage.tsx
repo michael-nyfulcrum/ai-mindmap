@@ -2,15 +2,22 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import {
   addEdge,
   Controls,
+  getNodesBounds,
+  getViewportForBounds,
+  MarkerType,
+  MiniMap,
   ReactFlow,
+  reconnectEdge,
   useEdgesState,
   useNodesState,
   useReactFlow,
   type Connection,
+  type Edge,
   type EdgeChange,
   type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { toPng } from "html-to-image";
 import { Circle, Code2, LayoutGrid, PanelRightOpen, Plug, Sparkles } from "lucide-react";
 import { CanvasAiPanel } from "./CanvasAiPanel";
 import { ConnectAgentModal } from "./ConnectAgentModal";
@@ -24,6 +31,7 @@ import {
   createProject,
   deleteChat,
   deleteProject,
+  generateProject,
   listChats,
   listProjects,
   loadCanvas,
@@ -33,6 +41,7 @@ import {
   sendChatMessage,
   uploadAsset,
 } from "../api/canvasApi";
+import { layoutGraph } from "./autoLayout";
 import {
   defaultFieldsForType,
   type CanvasFlowEdge,
@@ -91,10 +100,21 @@ export function CanvasPage() {
 
   const activeNodes = useMemo(() => nodes.filter((node) => activeNodeIds.includes(node.id)), [activeNodeIds, nodes]);
   const selectedNode = activeNodes.length === 1 ? activeNodes[0] : null;
-  // Render every edge as a curved bezier, including projects saved with the older step style.
+  // Render every edge as a curved bezier with a directional arrowhead. Edges that
+  // touch an AI-flagged node animate so the impact ripples along its connections.
+  const flaggedNodeIds = useMemo(
+    () => new Set(nodes.filter((node) => node.data.impact).map((node) => node.id)),
+    [nodes],
+  );
   const displayEdges = useMemo(
-    () => edges.map((edge) => (edge.type === "default" ? edge : { ...edge, type: "default" })),
-    [edges],
+    () =>
+      edges.map((edge) => ({
+        ...edge,
+        type: "default",
+        markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
+        animated: flaggedNodeIds.has(edge.source) || flaggedNodeIds.has(edge.target),
+      })),
+    [edges, flaggedNodeIds],
   );
 
   useEffect(() => {
@@ -323,6 +343,52 @@ export function CanvasPage() {
     },
     [setEdges],
   );
+
+  const reconnectEdgeEndpoint = useCallback(
+    (oldEdge: CanvasFlowEdge, newConnection: Connection) => {
+      dirtyRef.current = true;
+      setEdges((current) => reconnectEdge(oldEdge, newConnection, current));
+    },
+    [setEdges],
+  );
+
+  const isValidConnection = useCallback(
+    (connection: Connection | Edge) => {
+      if (connection.source === connection.target) {
+        return false;
+      }
+      return !snapshotRef.current.edges.some(
+        (edge) => edge.source === connection.source && edge.target === connection.target,
+      );
+    },
+    [],
+  );
+
+  const exportCanvasImage = useCallback(() => {
+    const viewportEl = document.querySelector(".react-flow__viewport") as HTMLElement | null;
+    if (!viewportEl || nodes.length === 0) {
+      return;
+    }
+    const width = 1920;
+    const height = 1080;
+    const bounds = getNodesBounds(nodes);
+    const viewport = getViewportForBounds(bounds, width, height, 0.4, 2, 0.12);
+    void toPng(viewportEl, {
+      backgroundColor: "#060b18",
+      width,
+      height,
+      style: {
+        width: `${width}px`,
+        height: `${height}px`,
+        transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+      },
+    }).then((dataUrl) => {
+      const link = document.createElement("a");
+      link.download = `${project.name.replace(/\s+/g, "-").toLowerCase() || "canvas"}.png`;
+      link.href = dataUrl;
+      link.click();
+    });
+  }, [nodes, project.name]);
 
   const saveNodeVersion = useCallback(
     async (nodeId: string, data: CanvasNodeData, commitMessage: string) => {
@@ -572,6 +638,65 @@ export function CanvasPage() {
     }
   }, [fitView, loadProjectChats, setEdges, setNodes]);
 
+  const handleGenerateProject = useCallback(
+    async (prompt: string) => {
+      const trimmed = prompt.trim();
+      if (!trimmed) {
+        return;
+      }
+      setIsLoadingProject(true);
+      setProjectLoadingLabel("Planning your project…");
+      try {
+        const graph = await generateProject(trimmed);
+        const laidOut = layoutGraph(graph.nodes, graph.edges);
+        const snapshot = await createProject({
+          name: graph.projectName,
+          description: graph.projectDescription,
+        });
+        setProjects((prev) => [snapshot.project, ...prev]);
+        setProject(snapshot.project);
+        setNodes([]);
+        setEdges([]);
+        setActiveNodeIds([]);
+        setActiveEdgeIds([]);
+        await loadProjectChats(snapshot.project.id);
+        setSaveState("saved");
+        setShowProjectPicker(false);
+        setIsLoadingProject(false);
+        navigateToCanvas(snapshot.project.id);
+
+        // Stream the plan onto the canvas so the AI looks like it is drawing it.
+        dirtyRef.current = false;
+        for (const node of laidOut) {
+          setNodes((current) => current.concat(node));
+          fitView({ padding: 0.3, duration: 220 });
+          await delay(130);
+        }
+        for (const edge of graph.edges) {
+          setEdges((current) => current.concat(edge));
+          await delay(60);
+        }
+        await delay(180);
+        dirtyRef.current = true;
+        await persist();
+        fitView({ padding: 0.2, duration: 320 });
+      } catch {
+        setSaveState("error");
+        setShowProjectPicker(true);
+      } finally {
+        setIsLoadingProject(false);
+        setProjectLoadingLabel("Loading project...");
+      }
+    },
+    [fitView, loadProjectChats, persist, setEdges, setNodes],
+  );
+
+  const autoArrangeNodes = useCallback(() => {
+    setNodes((current) => layoutGraph(current, snapshotRef.current.edges));
+    dirtyRef.current = true;
+    window.requestAnimationFrame(() => fitView({ padding: 0.18, duration: 420 }));
+  }, [fitView, setNodes]);
+
   const handleRenameProject = useCallback(
     async (targetProjectId: string, name: string) => {
       try {
@@ -637,6 +762,7 @@ export function CanvasPage() {
         loadingLabel={projectLoadingLabel}
         onSelectProject={(id) => void handleSelectProject(id)}
         onCreateProject={(templateId) => void handleCreateProject(templateId)}
+        onGenerateProject={(prompt) => void handleGenerateProject(prompt)}
         onRenameProject={(id, name) => void handleRenameProject(id, name)}
         onDeleteProject={(id) => void handleDeleteProject(id)}
       />
@@ -694,12 +820,25 @@ export function CanvasPage() {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={connectNodes}
+          onReconnect={reconnectEdgeEndpoint}
+          isValidConnection={isValidConnection}
           onSelectionChange={handleSelectionChange}
           fitView
+          snapToGrid
+          snapGrid={[16, 16]}
           deleteKeyCode={null}
           multiSelectionKeyCode={["Meta", "Shift"]}
         >
           <Controls showInteractive={false} />
+          <MiniMap
+            position="top-right"
+            pannable
+            zoomable
+            nodeColor={miniMapNodeColor}
+            nodeStrokeWidth={2}
+            maskColor="rgb(6 11 24 / 72%)"
+            style={{ background: "rgb(10 16 32 / 88%)" }}
+          />
         </ReactFlow>
       </section>
 
@@ -745,6 +884,8 @@ export function CanvasPage() {
       <CanvasToolbar
         onAddNode={handleAddNode}
         onFitView={() => fitView({ padding: 0.18 })}
+        onAutoArrange={autoArrangeNodes}
+        onExportImage={exportCanvasImage}
         onSave={() => void persist()}
         onLoadDemo={() => void handleLoadDemo()}
         onDeleteItems={deleteActiveItems}
@@ -765,6 +906,19 @@ export function CanvasPage() {
       ) : null}
     </main>
   );
+}
+
+const MINIMAP_NODE_COLORS: Record<CanvasNodeType, string> = {
+  project_contract: "#4a9eff",
+  requirement: "#3fc46b",
+  source_snapshot: "#22d3ee",
+  link: "#f0a429",
+  image: "#e879b9",
+  note: "#b78cff",
+};
+
+function miniMapNodeColor(node: CanvasFlowNode) {
+  return MINIMAP_NODE_COLORS[node.data.canvasType] ?? "#6aa6f8";
 }
 
 function canvasPath(projectId: string) {
@@ -799,7 +953,12 @@ function fileToDataUrl(file: File) {
 }
 
 function nodeChangeAffectsPersistence(change: NodeChange<CanvasFlowNode>) {
-  return change.type !== "select" && change.type !== "dimensions";
+  // Persist explicit user resizes (NodeResizer) but ignore initial measurement
+  // and selection changes so we don't save on every passive layout tick.
+  if (change.type === "dimensions") {
+    return Boolean(change.resizing);
+  }
+  return change.type !== "select";
 }
 
 function edgeChangeAffectsPersistence(change: EdgeChange<CanvasFlowEdge>) {

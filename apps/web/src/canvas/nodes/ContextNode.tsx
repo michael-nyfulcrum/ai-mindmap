@@ -1,6 +1,6 @@
 import { memo } from "react";
-import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { AlertCircle, CheckCircle2, FileText, Image, Link2, ScrollText } from "lucide-react";
+import { Handle, NodeResizer, NodeToolbar, Position, useReactFlow, type NodeProps } from "@xyflow/react";
+import { AlertCircle, CheckCircle2, Crosshair, FileText, Image, Link2, ScrollText, Trash2 } from "lucide-react";
 import type { CanvasFlowNode, CanvasNodeType, ImpactStatus } from "../canvasTypes";
 import { NODE_TYPE_LABELS } from "../canvasTypes";
 
@@ -13,11 +13,12 @@ const nodeIcons: Record<CanvasNodeType, typeof FileText> = {
   source_snapshot: AlertCircle,
 };
 
-export const ContextNode = memo(function ContextNode({ data, selected }: NodeProps<CanvasFlowNode>) {
+export const ContextNode = memo(function ContextNode({ id, data, selected }: NodeProps<CanvasFlowNode>) {
   const Icon = nodeIcons[data.canvasType];
   const content = data.fields.content ?? "";
   const imageUrl = data.canvasType === "image" ? imageUrlFromContent(content) : "";
   const preview = previewText(content);
+  const { deleteElements, fitView } = useReactFlow();
 
   const impact = data.impact;
 
@@ -33,6 +34,26 @@ export const ContextNode = memo(function ContextNode({ data, selected }: NodePro
         .filter(Boolean)
         .join(" ")}
     >
+      {data.canvasType === "project_contract" ? (
+        <NodeResizer isVisible={selected} minWidth={240} minHeight={140} lineClassName="context-node-resize-line" handleClassName="context-node-resize-handle" />
+      ) : null}
+      <NodeToolbar isVisible={selected} position={Position.Top} className="node-toolbar-actions">
+        <button
+          type="button"
+          title="Focus node"
+          onClick={() => void fitView({ nodes: [{ id }], duration: 320, padding: 0.6 })}
+        >
+          <Crosshair size={14} />
+        </button>
+        <button
+          type="button"
+          title="Delete node"
+          className="node-toolbar-danger"
+          onClick={() => void deleteElements({ nodes: [{ id }] })}
+        >
+          <Trash2 size={14} />
+        </button>
+      </NodeToolbar>
       <Handle type="target" position={Position.Left} />
       <header className="context-node-header">
         <span className="context-node-icon">
