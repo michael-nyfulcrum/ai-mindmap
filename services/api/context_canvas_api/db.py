@@ -29,6 +29,7 @@ class AppDatabase:
         self.connection.row_factory = sqlite3.Row
         self.connection.execute("PRAGMA foreign_keys = ON")
         self.connection.execute("PRAGMA journal_mode = WAL")
+        self.connection.execute("PRAGMA busy_timeout = 5000")
         self._migrate()
         if seed:
             self._seed()
@@ -122,6 +123,18 @@ class AppDatabase:
             CREATE INDEX IF NOT EXISTS idx_contract_versions_project_node
             ON contract_change_versions (project_id, node_id, version_number DESC);
 
+            CREATE INDEX IF NOT EXISTS idx_chat_messages_thread
+            ON chat_messages (thread_id, created_at);
+
+            CREATE INDEX IF NOT EXISTS idx_chat_threads_project
+            ON chat_threads (project_id, updated_at DESC);
+
+            CREATE INDEX IF NOT EXISTS idx_uploads_project
+            ON uploads (project_id);
+
+            CREATE INDEX IF NOT EXISTS idx_analysis_runs_project
+            ON analysis_runs (project_id);
+
             CREATE TABLE IF NOT EXISTS schema_migrations (
                 id TEXT PRIMARY KEY,
                 applied_at TEXT NOT NULL
@@ -133,6 +146,7 @@ class AppDatabase:
         self._migrate_legacy_uploads()
         self._migrate_legacy_analysis_runs()
         self._record_schema_migration("2026_05_26_contract_change_versions")
+        self._record_schema_migration("2026_06_03_fk_indexes")
         self.connection.commit()
 
     def _record_schema_migration(self, migration_id: str) -> None:
@@ -1035,8 +1049,12 @@ def _with_audit_metadata(
         "updatedAt": now if semantic_changed else previous_audit.get("updatedAt") or incoming_audit.get("updatedAt") or data.get("updatedAt") or now,
         "updatedBy": actor if semantic_changed else previous_audit.get("updatedBy") or incoming_audit.get("updatedBy") or actor,
     }
-    preserved_impact = None if semantic_changed else data.get("impact") or existing_data.get("impact")
-    next_data = {key: value for key, value in data.items() if not (semantic_changed and key == "impact")}
+    # An edit to the node's own content/title resolves any impact flag on it, even for
+    # non-versioned node types (notes, links) where _changed_fields short-circuits.
+    content_edited = _node_content(existing) != _node_content(node) or _node_title(existing) != _node_title(node)
+    clear_impact = semantic_changed or (existing is not None and content_edited)
+    preserved_impact = None if clear_impact else data.get("impact") or existing_data.get("impact")
+    next_data = {key: value for key, value in data.items() if not (clear_impact and key == "impact")}
     next_data["audit"] = audit
     if preserved_impact:
         next_data["impact"] = preserved_impact

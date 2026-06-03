@@ -24,7 +24,9 @@ def _repo_root_env() -> Path:
 
 
 def ai_configuration_status() -> dict[str, str | bool]:
+    from context_canvas_api.analyzer import _openai_model
+
     return {
-        "model": "gpt-4.1-mini",
+        "model": _openai_model(),
         "openaiConfigured": bool(os.getenv("OPENAI_API_KEY", "").strip()),
     }

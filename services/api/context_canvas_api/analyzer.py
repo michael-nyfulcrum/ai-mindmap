@@ -2,10 +2,15 @@ from __future__ import annotations
 
 import difflib
 import json
+import logging
 import os
 from typing import Any
 
 from context_canvas_api.models import AnalysisResponse, CanvasSnapshot, ChangeImpact
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_OPENAI_MODEL = "gpt-4.1-mini"
 
 
 class AIProviderError(RuntimeError):
@@ -170,6 +175,7 @@ def analyze_change_impact(
         )
         parsed = _parse_json_object(_response_text(response))
     except Exception:
+        logger.warning("Change impact AI analysis failed; using rule-based fallback.", exc_info=True)
         return fallback_summary, fallback_impacts
 
     summary = str(parsed.get("summary") or fallback_summary).strip() or fallback_summary
@@ -210,11 +216,11 @@ def _openai_client():
     except Exception as exc:
         raise AIProviderError("The OpenAI Python package is required.") from exc
 
-    return OpenAI(api_key=api_key)
+    return OpenAI(api_key=api_key, timeout=60.0, max_retries=2)
 
 
 def _openai_model() -> str:
-    return "gpt-4.1-mini"
+    return os.getenv("OPENAI_MODEL", "").strip() or DEFAULT_OPENAI_MODEL
 
 
 def _analysis_payload(snapshot: CanvasSnapshot, question: str) -> str:

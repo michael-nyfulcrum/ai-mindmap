@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -22,10 +23,12 @@ from context_canvas_api.source_fetcher import fetch_source, infer_source_type, s
 
 load_project_dotenv()
 
+logger = logging.getLogger(__name__)
+
 
 class CreateProjectRequest(BaseModel):
-    name: str
-    description: str | None = None
+    name: str = Field(max_length=300)
+    description: str | None = Field(default=None, max_length=4000)
     viewport: dict[str, Any] | None = None
     nodes: list[dict[str, Any]] = Field(default_factory=list)
     edges: list[dict[str, Any]] = Field(default_factory=list)
@@ -49,12 +52,20 @@ class GenerateProjectRequest(BaseModel):
 
 
 class SuggestRequest(BaseModel):
-    targetNodeId: str | None = None
-    instruction: str | None = None
+    targetNodeId: str | None = Field(default=None, max_length=128)
+    instruction: str | None = Field(default=None, max_length=8000)
+
+    @field_validator("targetNodeId", "instruction")
+    @classmethod
+    def blank_to_none(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
 
 
 class AnalyzeRequest(BaseModel):
-    question: str = Field(min_length=1)
+    question: str = Field(min_length=1, max_length=8000)
 
     @field_validator("question")
     @classmethod
@@ -66,9 +77,9 @@ class AnalyzeRequest(BaseModel):
 
 
 class UploadRequest(BaseModel):
-    projectId: str
-    filename: str
-    contentType: str
+    projectId: str = Field(max_length=128)
+    filename: str = Field(max_length=300)
+    contentType: str = Field(max_length=200)
     dataUrl: str
 
     @field_validator("projectId", "filename", "contentType", "dataUrl")
@@ -90,7 +101,7 @@ class ChatRequest(BaseModel):
 
 
 class ChatMessageRequest(BaseModel):
-    content: str = Field(min_length=1)
+    content: str = Field(min_length=1, max_length=16000)
 
     @field_validator("content")
     @classmethod
@@ -113,10 +124,12 @@ def create_app(
             db_path or database_path(),
             seed=_seed_enabled() if seed is None else seed,
         )
+        logger.info("Context Canvas API started")
         try:
             yield
         finally:
             app_instance.state.db.close()
+            logger.info("Context Canvas API stopped")
 
     app = FastAPI(title="Context Canvas API", version="0.1.0", lifespan=lifespan)
     app.state.upload_dir = upload_dir
@@ -125,8 +138,8 @@ def create_app(
         CORSMiddleware,
         allow_origins=_cors_origins(),
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "x-context-canvas-actor"],
     )
     @app.get("/health")
     def health() -> dict[str, str]:
