@@ -43,9 +43,7 @@ def search_jira_issues(query: str, max_results: int = 5) -> SourceSearchResult:
     if not _atlassian_dependency_ready():
         return _dependency_missing_search("jira", query)
     try:
-        from atlassian import Jira
-
-        client = Jira(url=settings.url, username=settings.email, password=settings.token, cloud=True, api_version="3")
+        client = _jira_client(settings)
         response = client.jql(_build_jql(query), limit=max_results, fields="summary,description,status,assignee,issuetype,labels,updated,project")
         sources = [_jira_issue_to_source(issue, settings) for issue in response.get("issues", [])]
     except Exception as exc:
@@ -67,9 +65,7 @@ def fetch_jira_issue(issue_key: str) -> SourceDocument:
     if not _atlassian_dependency_ready():
         return _dependency_missing_document("jira", normalized)
     try:
-        from atlassian import Jira
-
-        client = Jira(url=settings.url, username=settings.email, password=settings.token, cloud=True, api_version="3")
+        client = _jira_client(settings)
         issue = client.issue(normalized, fields="summary,description,status,assignee,issuetype,labels,updated,project")
     except Exception as exc:
         return SourceDocument(status="error", kind="jira", source_id=normalized, message=f"Jira issue lookup failed: {exc}")
@@ -98,9 +94,7 @@ def search_confluence_pages(query: str, max_results: int = 5) -> SourceSearchRes
     if not _atlassian_dependency_ready():
         return _dependency_missing_search("confluence", query)
     try:
-        from atlassian import Confluence
-
-        client = Confluence(url=settings.url, username=settings.email, password=settings.token)
+        client = _confluence_client(settings)
         cql = f'type = page AND text ~ "{_escape(query)}" ORDER BY lastmodified DESC'
         response = client.cql(cql, limit=max_results, expand="content.space,content.version")
         results = response.get("results", [])
@@ -123,9 +117,7 @@ def fetch_confluence_page(page_id: str) -> SourceDocument:
     if not _atlassian_dependency_ready():
         return _dependency_missing_document("confluence", page_id)
     try:
-        from atlassian import Confluence
-
-        client = Confluence(url=settings.url, username=settings.email, password=settings.token)
+        client = _confluence_client(settings)
         page = client.get_page_by_id(page_id, expand="body.view,version,space,metadata.labels")
     except Exception as exc:
         return SourceDocument(status="error", kind="confluence", source_id=page_id, message=f"Confluence page lookup failed: {exc}")
@@ -135,7 +127,7 @@ def fetch_confluence_page(page_id: str) -> SourceDocument:
         kind="confluence",
         source_id=str(page.get("id") or page_id),
         title=page.get("title"),
-        url=f"{settings.url.rstrip()}/wiki/spaces/{((page.get('space') or {}).get('key'))}/pages/{page.get('id')}",
+        url=f"{settings.url.rstrip('/')}/wiki/spaces/{((page.get('space') or {}).get('key'))}/pages/{page.get('id')}",
         content=_html_to_text(body),
         message=f"Loaded Confluence page {page.get('title') or page_id}.",
         metadata={
@@ -227,6 +219,18 @@ def _atlassian_dependency_ready() -> bool:
     except ModuleNotFoundError:
         return False
     return True
+
+
+def _jira_client(settings: AtlassianSettings):
+    from atlassian import Jira
+
+    return Jira(url=settings.url, username=settings.email, password=settings.token, cloud=True, api_version="3")
+
+
+def _confluence_client(settings: AtlassianSettings):
+    from atlassian import Confluence
+
+    return Confluence(url=settings.url, username=settings.email, password=settings.token)
 
 
 def _build_jql(query: str) -> str:

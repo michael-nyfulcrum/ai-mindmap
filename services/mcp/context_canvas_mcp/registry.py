@@ -23,18 +23,12 @@ from context_canvas_mcp.sources import (
 CORE_TAGS = {"mindmap", "source"}
 
 
-class EchoResponse(BaseModel):
-    message: str
-    uppercase: str
-    character_count: int
-
-
 class CanvasSummary(BaseModel):
-    project_name: str
-    node_count: int
-    edge_count: int
-    requirement_count: int
-    source_count: int
+    project_name: str = Field(description="Name of the project the snapshot belongs to.")
+    node_count: int = Field(description="Total nodes in the snapshot.")
+    edge_count: int = Field(description="Total relationships between nodes.")
+    requirement_count: int = Field(description="Number of requirement nodes (the core constraints).")
+    source_count: int = Field(description="Number of source-snapshot and link nodes backing the requirements.")
     summary: str = Field(description="Plain-language context summary.")
 
 
@@ -43,21 +37,15 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         return CanvasStore(db_path) if db_path else CanvasStore.from_settings()
 
     @app.tool(
-        name="echo",
-        tags=CORE_TAGS | {"diagnostic"},
-        description="Echo a message back for MCP smoke testing.",
-        annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": False},
-    )
-    def echo(message: str) -> EchoResponse:
-        return EchoResponse(message=message, uppercase=message.upper(), character_count=len(message))
-
-    @app.tool(
         name="search_jira_issues",
         tags=CORE_TAGS | {"jira", "retrieval"},
         description="Search Jira issues for requirement source context.",
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": True},
     )
-    def search_jira_issues_tool(query: str, max_results: int = 5):
+    def search_jira_issues_tool(
+        query: str = Field(description="Free-text to match against Jira issue summaries and descriptions.", min_length=1, max_length=500),
+        max_results: int = Field(default=5, description="Maximum issues to return (clamped to 1-10).", ge=1, le=10),
+    ):
         return _tool_json(search_jira_issues(query=query, max_results=min(max(max_results, 1), 10)))
 
     @app.tool(
@@ -66,7 +54,9 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         description="Fetch a Jira issue by issue key.",
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": True},
     )
-    def fetch_jira_issue_tool(issue_key: str):
+    def fetch_jira_issue_tool(
+        issue_key: str = Field(description="Jira issue key, e.g. 'PROJ-123'.", min_length=1, max_length=64),
+    ):
         return _tool_json(fetch_jira_issue(issue_key))
 
     @app.tool(
@@ -75,7 +65,10 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         description="Search Confluence pages for requirement source context.",
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": True},
     )
-    def search_confluence_pages_tool(query: str, max_results: int = 5):
+    def search_confluence_pages_tool(
+        query: str = Field(description="Free-text to match against Confluence page titles and bodies.", min_length=1, max_length=500),
+        max_results: int = Field(default=5, description="Maximum pages to return (clamped to 1-10).", ge=1, le=10),
+    ):
         return _tool_json(search_confluence_pages(query=query, max_results=min(max(max_results, 1), 10)))
 
     @app.tool(
@@ -84,7 +77,9 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         description="Fetch a Confluence page by page ID.",
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": True},
     )
-    def fetch_confluence_page_tool(page_id: str):
+    def fetch_confluence_page_tool(
+        page_id: str = Field(description="Confluence page ID (numeric string from the page URL).", min_length=1, max_length=64),
+    ):
         return _tool_json(fetch_confluence_page(page_id))
 
     @app.tool(
@@ -93,7 +88,9 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         description="Normalize a Figma URL into source metadata for canvas citation.",
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": True},
     )
-    def fetch_figma_link_metadata_tool(url: str):
+    def fetch_figma_link_metadata_tool(
+        url: str = Field(description="A figma.com file or prototype URL to normalize into source metadata.", min_length=1, max_length=2048),
+    ):
         return _tool_json(fetch_figma_link_metadata(url))
 
     @app.tool(
@@ -102,7 +99,9 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         description="Normalize a GitHub issue or pull request URL into source metadata.",
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": True},
     )
-    def fetch_github_issue_or_pr_tool(url: str):
+    def fetch_github_issue_or_pr_tool(
+        url: str = Field(description="A github.com issue or pull request URL to normalize into source metadata.", min_length=1, max_length=2048),
+    ):
         return _tool_json(fetch_github_issue_or_pr(url))
 
     @app.tool(
@@ -111,7 +110,11 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         description="Search configured source systems and merge normalized source references.",
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": True},
     )
-    def search_sources_tool(query: str, sources: list[str] | None = None, max_results: int = 5):
+    def search_sources_tool(
+        query: str = Field(description="Free-text to search across configured source systems.", min_length=1, max_length=500),
+        sources: list[str] | None = Field(default=None, description="Optional subset of source systems to query, e.g. ['jira', 'confluence']. Omit to search all configured systems."),
+        max_results: int = Field(default=5, description="Maximum references to return per source (clamped to 1-10).", ge=1, le=10),
+    ):
         return _tool_json(search_sources(query=query, sources=sources, max_results=min(max(max_results, 1), 10)))
 
     @app.tool(
@@ -120,7 +123,9 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         description="List saved Mindmap projects from the shared SQLite database.",
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": False},
     )
-    def list_canvas_projects(limit: int = 20):
+    def list_canvas_projects(
+        limit: int = Field(default=20, description="Maximum projects to return, most recently updated first.", ge=1, le=100),
+    ):
         projects = canvas_store().list_projects(limit=limit)
         return _tool_json({"projects": projects})
 
@@ -130,7 +135,9 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         description="Load a saved canvas snapshot from SQLite. Defaults to the most recently updated project.",
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": False},
     )
-    def get_canvas_snapshot(project_id: str | None = None):
+    def get_canvas_snapshot(
+        project_id: str | None = Field(default=None, description="Project ID from list_canvas_projects. Omit to use the most recently updated project."),
+    ):
         snapshot = canvas_store().get_snapshot(project_id)
         if not snapshot:
             return _tool_json({"status": "not_found", "message": "No matching Mindmap project was found."})
@@ -145,7 +152,10 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         ),
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": False},
     )
-    def get_canvas_context(project_id: str | None = None, task: str | None = None):
+    def get_canvas_context(
+        project_id: str | None = Field(default=None, description="Project ID from list_canvas_projects. Omit to use the most recently updated project."),
+        task: str | None = Field(default=None, description="Optional description of the coding task, used to prioritize the most relevant requirements in the returned context.", max_length=2000),
+    ):
         context = canvas_store().get_agent_context(project_id=project_id, task=task)
         if not context:
             return _tool_json({"status": "not_found", "message": "No matching Mindmap project was found."})
@@ -158,12 +168,12 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         annotations={"readOnlyHint": False, "idempotentHint": False, "openWorldHint": False},
     )
     def upsert_requirement_node(
-        project_id: str,
-        title: str,
-        content: str,
-        source_node_ids: list[str] | None = None,
-        tags: list[str] | None = None,
-        node_id: str | None = None,
+        project_id: str = Field(description="Existing project ID from list_canvas_projects.", min_length=1, max_length=128),
+        title: str = Field(description="Short requirement title.", min_length=1, max_length=256),
+        content: str = Field(description="Requirement body in Markdown: the constraint, acceptance criteria, or decision.", min_length=1, max_length=50000),
+        source_node_ids: list[str] | None = Field(default=None, description="IDs of source-snapshot nodes that back this requirement, to draw citation edges."),
+        tags: list[str] | None = Field(default=None, description="Optional labels for grouping or filtering."),
+        node_id: str | None = Field(default=None, description="Pass an existing node ID to update it; omit to create a new node."),
     ):
         return _tool_json(canvas_store().upsert_requirement(
             project_id=project_id,
@@ -181,15 +191,15 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         annotations={"readOnlyHint": False, "idempotentHint": False, "openWorldHint": False},
     )
     def upsert_source_snapshot_node(
-        project_id: str,
-        title: str,
-        source_type: str,
-        source_id: str,
-        summary: str,
-        source_url: str = "",
-        raw_text: str = "",
-        tags: list[str] | None = None,
-        node_id: str | None = None,
+        project_id: str = Field(description="Existing project ID from list_canvas_projects.", min_length=1, max_length=128),
+        title: str = Field(description="Short title for the source snapshot.", min_length=1, max_length=256),
+        source_type: str = Field(description="Source system this snapshot came from.", pattern="^(jira|confluence|figma|github|generic)$"),
+        source_id: str = Field(description="Stable identifier within the source system, e.g. a Jira key or page ID.", min_length=1, max_length=256),
+        summary: str = Field(description="Concise summary of the source content relevant to requirements.", min_length=1, max_length=10000),
+        source_url: str = Field(default="", description="Canonical URL of the source, if any.", max_length=2048),
+        raw_text: str = Field(default="", description="Optional fuller extracted text from the source.", max_length=50000),
+        tags: list[str] | None = Field(default=None, description="Optional labels for grouping or filtering."),
+        node_id: str | None = Field(default=None, description="Pass an existing node ID to update it; omit to create a new node."),
     ):
         return _tool_json(canvas_store().upsert_source_snapshot(
             project_id=project_id,
@@ -209,7 +219,9 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
         description="Summarize a saved canvas snapshot without mutating it.",
         annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": False},
     )
-    def summarize_canvas_nodes(snapshot: dict[str, Any]) -> CanvasSummary:
+    def summarize_canvas_nodes(
+        snapshot: dict[str, Any] = Field(description="A full canvas snapshot object (with 'project', 'nodes', and 'edges'), as returned by get_canvas_snapshot."),
+    ) -> CanvasSummary:
         nodes = snapshot.get("nodes") or []
         edges = snapshot.get("edges") or []
         project = snapshot.get("project") or {}
