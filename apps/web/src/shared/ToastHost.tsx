@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { Check, TriangleAlert } from "lucide-react";
 import { Spinner } from "./ui/Spinner";
-import { useToasts, type Toast, type ToastStatus } from "./toast";
+import { toast as toastApi, useToasts, type Toast, type ToastStatus } from "./toast";
 
 export function ToastHost() {
   const items = useToasts();
@@ -20,12 +20,25 @@ export function ToastHost() {
 
 function ToastItem({ toast: item }: { toast: Toast }) {
   return (
-    <div className={`toast toast-${item.status}`} role="status">
+    <div className={`toast toast-${item.status}`} role="status" onClick={() => toastApi.dismiss(item.id)} title="Dismiss">
       <span className="toast-orb">{statusIcon(item.status)}</span>
       <div className="toast-body">
         <span className="toast-message">{item.message}</span>
         {item.detail ? <span className="toast-detail">{item.detail}</span> : null}
       </div>
+      {item.action ? (
+        <button
+          type="button"
+          className="toast-action"
+          onClick={(event) => {
+            event.stopPropagation();
+            item.action?.onClick();
+            toastApi.dismiss(item.id);
+          }}
+        >
+          {item.action.label}
+        </button>
+      ) : null}
     </div>
   );
 }

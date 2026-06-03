@@ -16,6 +16,8 @@ export type CanvasNodeData = {
   fields: Record<string, string>;
   tags: string[];
   updatedAt: string;
+  locked?: boolean;
+  accent?: string;
   highlighted?: boolean;
   proposed?: "add" | "update";
   rationale?: string;

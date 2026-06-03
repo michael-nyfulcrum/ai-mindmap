@@ -3,6 +3,9 @@ import { Check, Copy, Plug, Terminal, X } from "lucide-react";
 import type { CanvasProject } from "./canvasTypes";
 import { Button } from "../shared/ui/Button";
 import { Panel } from "../shared/ui/Panel";
+import { copyText } from "../shared/clipboard";
+import { toast } from "../shared/toast";
+import { useModalDismiss } from "../shared/useModalDismiss";
 
 type ConnectAgentModalProps = {
   project: CanvasProject;
@@ -30,11 +33,20 @@ const MCP_TOOLS = [
 
 export function ConnectAgentModal({ project, onClose }: ConnectAgentModalProps) {
   const [tab, setTab] = useState<AgentTab>("claude-code");
+  const dialogRef = useModalDismiss<HTMLDivElement>(onClose);
   const mcpUrl = RAW_MCP_URL.startsWith("http") ? RAW_MCP_URL : `${window.location.origin}${RAW_MCP_URL}`;
   const canvasUrl = `${window.location.origin}/canvas/${project.id}`;
 
   return (
-    <div className="connect-backdrop" role="dialog" aria-modal="true" aria-label="Connect your coding agent" onMouseDown={onClose}>
+    <div
+      ref={dialogRef}
+      tabIndex={-1}
+      className="connect-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Connect your coding agent"
+      onMouseDown={onClose}
+    >
       <Panel className="connect-modal">
         <div className="connect-inner" onMouseDown={(event) => event.stopPropagation()}>
           <header className="connect-head">
@@ -178,9 +190,14 @@ function CopyField({ value, mono = false, oneLine = false }: { value: string; mo
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    void navigator.clipboard?.writeText(value);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+    void copyText(value).then((ok) => {
+      if (!ok) {
+        toast.error("Couldn't copy to clipboard", undefined, "Select the text and copy manually.");
+        return;
+      }
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    });
   };
 
   return (

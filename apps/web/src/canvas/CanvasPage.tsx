@@ -18,12 +18,17 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { toPng } from "html-to-image";
-import { Circle, Code2, LayoutGrid, PanelRightOpen, Plug, Sparkles } from "lucide-react";
+import { Circle, Code2, LayoutGrid, Maximize2, Minimize2, PanelRightOpen, Plug } from "lucide-react";
 import { CanvasAiPanel } from "./CanvasAiPanel";
-import { ConnectAgentModal } from "./ConnectAgentModal";
-import { DeveloperHandoffPanel } from "./DeveloperHandoffPanel";
+const ConnectAgentModal = lazy(() => import("./ConnectAgentModal").then((m) => ({ default: m.ConnectAgentModal })));
+const DeveloperHandoffPanel = lazy(() => import("./DeveloperHandoffPanel").then((m) => ({ default: m.DeveloperHandoffPanel })));
+const CommandPalette = lazy(() => import("./CommandPalette").then((m) => ({ default: m.CommandPalette })));
+const ShortcutsOverlay = lazy(() => import("./ShortcutsOverlay").then((m) => ({ default: m.ShortcutsOverlay })));
 import { CanvasInspector } from "./CanvasInspector";
 import { CanvasToolbar } from "./CanvasToolbar";
+import { CanvasTypeFilter } from "./CanvasTypeFilter";
+import { ProjectSwitcher } from "./ProjectSwitcher";
+import { EdgeInspector } from "./EdgeInspector";
 import { GalaxyBackground } from "./GalaxyBackground";
 import { ProjectCarousel } from "./ProjectCarousel";
 import {
@@ -62,7 +67,12 @@ import { ContextNode } from "./nodes/ContextNode";
 import { Button } from "../shared/ui/Button";
 import { Spinner } from "../shared/ui/Spinner";
 import { createId } from "../shared/ids";
-import { nowIso } from "../shared/time";
+import { nowIso, formatRelativeTime } from "../shared/time";
+import { errorDetail } from "../shared/errors";
+import { isEditableTarget } from "../shared/dom";
+import { downloadText, slugify } from "../shared/download";
+import { copyText } from "../shared/clipboard";
+import { buildCanvasMarkdown } from "./exportMarkdown";
 import { PROJECT_TEMPLATES } from "./projectTemplates";
 
 const nodeTypes = { contextNode: ContextNode };
@@ -93,14 +103,22 @@ export function CanvasPage() {
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const [loadingChatId, setLoadingChatId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"loading" | "saved" | "saving" | "error">("loading");
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [savedTick, setSavedTick] = useState(0);
   const [isBooting, setIsBooting] = useState(true);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
   const [isInspectorCollapsed, setIsInspectorCollapsed] = useState(false);
   const [isHandoffOpen, setIsHandoffOpen] = useState(false);
   const [isConnectOpen, setIsConnectOpen] = useState(false);
+  const [isCommandOpen, setIsCommandOpen] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<Set<CanvasNodeType>>(() => new Set());
   const [proposal, setProposal] = useState<SuggestionResponse | null>(null);
   const [ghostPositions, setGhostPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [isSuggesting, setIsSuggesting] = useState(false);
+  // Only one AI action (chat/plan or suggestions) may run at a time so requests
+  // don't race or stack. Every AI trigger checks this before starting.
+  const aiBusy = isSending || isSuggesting;
   const { fitView, screenToFlowPosition, getViewport, setCenter } = useReactFlow();
   const projectId = project.id;
   const snapshotRef = useRef({ project, nodes, edges });
@@ -110,6 +128,10 @@ export function CanvasPage() {
 
   const activeNodes = useMemo(() => nodes.filter((node) => activeNodeIds.includes(node.id)), [activeNodeIds, nodes]);
   const selectedNode = activeNodes.length === 1 ? activeNodes[0] : null;
+  const selectedEdge = useMemo(
+    () => (activeEdgeIds.length === 1 ? edges.find((edge) => edge.id === activeEdgeIds[0]) ?? null : null),
+    [activeEdgeIds, edges],
+  );
   // Render every edge as a curved bezier with a directional arrowhead. Edges that
   // touch an AI-flagged node animate so the impact ripples along its connections.
   const flaggedNodeIds = useMemo(
@@ -123,16 +145,27 @@ export function CanvasPage() {
   );
 
   const displayNodes = useMemo(() => {
-    if (!proposal) {
-      return nodes;
+    let base = !proposal
+      ? nodes
+      : nodes
+          .map((node) =>
+            proposalView.updateNodeIds.has(node.id)
+              ? { ...node, data: { ...node.data, proposed: "update" as const, rationale: proposalView.updateRationale.get(node.id) } }
+              : node,
+          )
+          .concat(proposalView.proposedNodes);
+    // Locked nodes can't be dragged; only clone those to keep refs stable elsewhere.
+    if (base.some((node) => node.data.locked)) {
+      base = base.map((node) => (node.data.locked ? { ...node, draggable: false } : node));
     }
-    const withRings = nodes.map((node) =>
-      proposalView.updateNodeIds.has(node.id)
-        ? { ...node, data: { ...node.data, proposed: "update" as const, rationale: proposalView.updateRationale.get(node.id) } }
-        : node,
+    if (typeFilter.size === 0) {
+      return base;
+    }
+    // Spotlight the chosen types by dimming everything else.
+    return base.map((node) =>
+      typeFilter.has(node.data.canvasType) ? node : { ...node, style: { ...node.style, opacity: 0.16 } },
     );
-    return withRings.concat(proposalView.proposedNodes);
-  }, [nodes, proposal, proposalView]);
+  }, [nodes, proposal, proposalView, typeFilter]);
 
   const displayEdges = useMemo(() => {
     const committed = edges.map((edge) => ({
@@ -176,7 +209,11 @@ export function CanvasPage() {
         const result = await listProjects();
         if (!cancelled) setProjects(result.projects);
       } catch {
-        // show empty state — user can create a new project
+        // Surface the failure so an unreachable backend doesn't look like an
+        // empty workspace; the user can still try creating a project.
+        if (!cancelled) {
+          toast.error("Couldn’t reach the server", "boot", "Check that the API is running, then reload.");
+        }
       }
       await minimumLoading;
       if (cancelled) return;
@@ -239,6 +276,7 @@ export function CanvasPage() {
         setNodes(saved.nodes);
         setEdges(saved.edges);
         setSaveState("saved");
+        setLastSavedAt(Date.now());
         return true;
       } catch {
         dirtyRef.current = true;
@@ -341,8 +379,9 @@ export function CanvasPage() {
             content: `![${file.name}](${upload.url})`,
           },
         });
-      } catch {
+      } catch (error) {
         setSaveState("error");
+        toast.error("Couldn’t upload image", "upload", errorDetail(error));
       }
     };
     input.click();
@@ -362,17 +401,35 @@ export function CanvasPage() {
   const connectNodes = useCallback(
     (connection: Connection) => {
       const timestamp = nowIso();
+      const edgeId = createId("edge");
       dirtyRef.current = true;
       setEdges((current) =>
         addEdge(
           {
             ...connection,
-            id: createId("edge"),
+            id: edgeId,
             type: "default",
             label: "references",
             data: { relationship: "references", updatedAt: timestamp },
           },
           current,
+        ),
+      );
+      // Select the new edge so its relationship can be picked right away.
+      setActiveNodeIds([]);
+      setActiveEdgeIds([edgeId]);
+    },
+    [setEdges],
+  );
+
+  const updateEdgeLabel = useCallback(
+    (edgeId: string, relationship: string) => {
+      dirtyRef.current = true;
+      setEdges((current) =>
+        current.map((edge) =>
+          edge.id === edgeId
+            ? { ...edge, label: relationship, data: { relationship, updatedAt: nowIso() } }
+            : edge,
         ),
       );
     },
@@ -399,6 +456,42 @@ export function CanvasPage() {
     [],
   );
 
+  const handleManualSave = useCallback(async () => {
+    if (!project.id) {
+      return;
+    }
+    const ok = await persist();
+    if (ok) {
+      toast.success("Canvas saved", "manual-save");
+    } else {
+      toast.error("Couldn’t save — your changes are still here", "manual-save");
+    }
+  }, [persist, project.id]);
+
+  // Global canvas shortcuts: ? opens help, Cmd/Ctrl+S saves, Cmd/Ctrl+K opens the command palette.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "?" && !isEditableTarget(event.target)) {
+        event.preventDefault();
+        setIsShortcutsOpen(true);
+        return;
+      }
+      if (!event.metaKey && !event.ctrlKey) {
+        return;
+      }
+      const key = event.key.toLowerCase();
+      if (key === "s") {
+        event.preventDefault();
+        void handleManualSave();
+      } else if (key === "k") {
+        event.preventDefault();
+        setIsCommandOpen((open) => !open);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleManualSave]);
+
   const exportCanvasImage = useCallback(() => {
     const viewportEl = document.querySelector(".react-flow__viewport") as HTMLElement | null;
     if (!viewportEl || nodes.length === 0) {
@@ -417,24 +510,95 @@ export function CanvasPage() {
         height: `${height}px`,
         transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
       },
-    }).then((dataUrl) => {
-      const link = document.createElement("a");
-      link.download = `${project.name.replace(/\s+/g, "-").toLowerCase() || "canvas"}.png`;
-      link.href = dataUrl;
-      link.click();
-    });
+    })
+      .then((dataUrl) => {
+        const link = document.createElement("a");
+        link.download = `${project.name.replace(/\s+/g, "-").toLowerCase() || "canvas"}.png`;
+        link.href = dataUrl;
+        link.click();
+        toast.success("Canvas exported as PNG", "export-image");
+      })
+      .catch(() => {
+        toast.error("Couldn’t export the canvas — try again", "export-image");
+      });
   }, [nodes, project.name]);
+
+  const exportCanvasMarkdown = useCallback(() => {
+    const { project: currentProject, nodes: currentNodes, edges: currentEdges } = snapshotRef.current;
+    const markdown = buildCanvasMarkdown(currentProject, currentNodes, currentEdges);
+    downloadText(`${slugify(currentProject.name)}.md`, markdown, "text/markdown");
+    toast.success("Canvas exported as Markdown", "export-md");
+  }, []);
+
+  const copyCanvasMarkdown = useCallback(async () => {
+    const { project: currentProject, nodes: currentNodes, edges: currentEdges } = snapshotRef.current;
+    const ok = await copyText(buildCanvasMarkdown(currentProject, currentNodes, currentEdges));
+    if (ok) {
+      toast.success("Context copied as Markdown", "copy-md");
+    } else {
+      toast.error("Couldn’t copy to clipboard", "copy-md", "Try Export Markdown instead.");
+    }
+  }, []);
+
+  const exportCanvasJson = useCallback(() => {
+    const { project: currentProject, nodes: currentNodes, edges: currentEdges } = snapshotRef.current;
+    const payload = JSON.stringify({ project: currentProject, nodes: currentNodes, edges: currentEdges }, null, 2);
+    downloadText(`${slugify(currentProject.name)}.json`, payload, "application/json");
+    toast.success("Canvas exported as JSON", "export-json");
+  }, []);
+
+  const importCanvasJson = useCallback(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json,.json";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) {
+        return;
+      }
+      try {
+        const parsed = JSON.parse(await file.text());
+        const importedNodes = Array.isArray(parsed?.nodes) ? parsed.nodes : [];
+        const importedEdges = Array.isArray(parsed?.edges) ? parsed.edges : [];
+        if (importedNodes.length === 0) {
+          throw new Error("No nodes found in this file.");
+        }
+        const baseName = typeof parsed?.project?.name === "string" ? parsed.project.name : "Imported canvas";
+        const snapshot = await createProject({
+          name: `${baseName} (imported)`,
+          description: typeof parsed?.project?.description === "string" ? parsed.project.description : undefined,
+          nodes: importedNodes,
+          edges: importedEdges,
+        });
+        setProjects((prev) => [snapshot.project, ...prev.filter((item) => item.id !== snapshot.project.id)]);
+        setProject(snapshot.project);
+        setNodes(snapshot.nodes);
+        setEdges(snapshot.edges);
+        setActiveNodeIds([]);
+        setActiveEdgeIds([]);
+        setShowProjectPicker(false);
+        navigateToCanvas(snapshot.project.id);
+        await loadProjectChats(snapshot.project.id);
+        setSaveState("saved");
+        window.requestAnimationFrame(() => fitView({ padding: 0.18 }));
+        toast.success("Canvas imported", "import-json");
+      } catch (error) {
+        toast.error("Couldn’t import canvas", "import-json", errorDetail(error));
+      }
+    };
+    input.click();
+  }, [fitView, loadProjectChats, setEdges, setNodes]);
 
   const saveNodeVersion = useCallback(
     async (nodeId: string, data: CanvasNodeData, commitMessage: string) => {
       const nextNodes = snapshotRef.current.nodes.map((node) => (node.id === nodeId ? { ...node, data } : node));
       setNodes(nextNodes);
-      toast.loading("Etching changes into the canvas…", "save-node");
+      toast.loading("Saving your changes…", "save-node");
       const ok = await persist({ nodes: nextNodes, commitMessage: commitMessage || undefined });
       if (ok) {
-        toast.success("Saved — a new version is logged ✓", "save-node");
+        toast.success("Saved — version logged", "save-node");
       } else {
-        toast.error("Signal lost — changes weren’t saved", "save-node");
+        toast.error("Couldn’t save — your changes are still here", "save-node");
       }
     },
     [persist, setNodes],
@@ -444,6 +608,15 @@ export function CanvasPage() {
     const nodeIds = new Set(activeNodeIds);
     const edgeIds = new Set(activeEdgeIds);
     const removed = activeNodeIds.length + activeEdgeIds.length;
+    if (removed === 0) {
+      return;
+    }
+    // Capture everything that disappears — including edges removed by cascade —
+    // so Undo can restore the exact prior state.
+    const removedNodes = snapshotRef.current.nodes.filter((node) => nodeIds.has(node.id));
+    const removedEdges = snapshotRef.current.edges.filter(
+      (edge) => edgeIds.has(edge.id) || nodeIds.has(edge.source) || nodeIds.has(edge.target),
+    );
     dirtyRef.current = true;
     setNodes((current) => current.filter((node) => !nodeIds.has(node.id)));
     setEdges((current) =>
@@ -452,46 +625,155 @@ export function CanvasPage() {
     setActiveNodeIds([]);
     setActiveEdgeIds([]);
     setIsInspectorCollapsed(false);
-    if (removed > 0) {
-      toast.success(`Dissolved ${removed} item${removed === 1 ? "" : "s"} from the canvas`, "canvas-mutate");
-    }
+    const restore = () => {
+      dirtyRef.current = true;
+      setNodes((current) => [...current, ...removedNodes]);
+      setEdges((current) => [...current, ...removedEdges]);
+      setActiveNodeIds(removedNodes.map((node) => node.id));
+      toast.success(`Restored ${removed} item${removed === 1 ? "" : "s"}`, "canvas-mutate");
+    };
+    toast.success(`Removed ${removed} item${removed === 1 ? "" : "s"} from the canvas`, "canvas-mutate", undefined, {
+      label: "Undo",
+      onClick: restore,
+    });
   }, [activeEdgeIds, activeNodeIds, setEdges, setNodes]);
 
-  const sendCanvasMessage = useCallback(async (content: string) => {
-    if (!project.id) {
+  const duplicateActiveNodes = useCallback(() => {
+    const ids = new Set(activeNodeIds);
+    const originals = snapshotRef.current.nodes.filter((node) => ids.has(node.id) && !node.data.proposed);
+    if (originals.length === 0) {
       return;
     }
+    const timestamp = nowIso();
+    const clones: CanvasFlowNode[] = originals.map((node) => ({
+      ...node,
+      id: createId("node"),
+      position: { x: node.position.x + 32, y: node.position.y + 32 },
+      selected: false,
+      data: {
+        ...node.data,
+        title: `${node.data.title} (copy)`,
+        fields: { ...node.data.fields },
+        tags: [...node.data.tags],
+        updatedAt: timestamp,
+        audit: undefined,
+        impact: undefined,
+        highlighted: false,
+      },
+    }));
+    dirtyRef.current = true;
+    setNodes((current) => [...current, ...clones]);
+    setActiveNodeIds(clones.map((clone) => clone.id));
+    toast.success(`Duplicated ${clones.length} node${clones.length === 1 ? "" : "s"}`, "canvas-mutate");
+  }, [activeNodeIds, setNodes]);
 
-    if (!content.trim()) {
-      return;
-    }
+  const toggleTypeFilter = useCallback((type: CanvasNodeType) => {
+    setTypeFilter((current) => {
+      const next = new Set(current);
+      if (next.has(type)) {
+        next.delete(type);
+      } else {
+        next.add(type);
+      }
+      return next;
+    });
+  }, []);
 
-    await persist();
-    let chatId = activeChatId;
-    if (!chatId) {
-      const created = await createChat(project.id);
-      chatId = created.thread.id;
-      setChats((current) => [created.thread, ...current]);
-      setActiveChatId(chatId);
-      setMessages([]);
-    }
+  const clearTypeFilter = useCallback(() => setTypeFilter(new Set()), []);
 
-    const messageContent = content.trim();
-    setIsSending(true);
-    toast.loading("Consulting the neural core…", "chat");
-    try {
-      const result = await sendChatMessage({ projectId: project.id, chatId, content: messageContent });
-      setChats((current) => [result.thread, ...current.filter((chat) => chat.id !== result.thread.id)]);
-      setMessages(result.messages);
-      toast.success("The AI has answered ✓", "chat");
-    } catch {
-      setQuestion(messageContent);
-      setSaveState("error");
-      toast.error("The neural core went quiet — try again", "chat");
-    } finally {
-      setIsSending(false);
+  // Cmd/Ctrl+D duplicates the current selection (ignored while editing text).
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d" && !isEditableTarget(event.target)) {
+        event.preventDefault();
+        duplicateActiveNodes();
+      }
     }
-  }, [activeChatId, persist, project.id]);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [duplicateActiveNodes]);
+
+  // Cmd/Ctrl+A selects all nodes; arrow keys nudge the current selection.
+  useEffect(() => {
+    const NUDGE: Record<string, [number, number]> = {
+      ArrowUp: [0, -1],
+      ArrowDown: [0, 1],
+      ArrowLeft: [-1, 0],
+      ArrowRight: [1, 0],
+    };
+    function onKeyDown(event: KeyboardEvent) {
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "a") {
+        event.preventDefault();
+        const selectable = snapshotRef.current.nodes.filter((node) => !node.data.proposed);
+        setNodes((current) => current.map((node) => ({ ...node, selected: !node.data.proposed })));
+        setActiveNodeIds(selectable.map((node) => node.id));
+        setActiveEdgeIds([]);
+        return;
+      }
+      const delta = NUDGE[event.key];
+      if (delta && !event.metaKey && !event.ctrlKey && activeNodeIds.length > 0) {
+        event.preventDefault();
+        const step = event.shiftKey ? 10 : 1;
+        const ids = new Set(activeNodeIds);
+        dirtyRef.current = true;
+        setNodes((current) =>
+          current.map((node) =>
+            ids.has(node.id) && !node.data.locked
+              ? { ...node, position: { x: node.position.x + delta[0] * step, y: node.position.y + delta[1] * step } }
+              : node,
+          ),
+        );
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeNodeIds, setNodes]);
+
+  const sendCanvasMessage = useCallback(
+    async (
+      content: string,
+      options?: { forceNewChat?: boolean; chatTitle?: string; loadingMessage?: string },
+    ) => {
+      if (!project.id || aiBusy) {
+        return;
+      }
+
+      if (!content.trim()) {
+        return;
+      }
+
+      setIsSending(true);
+      toast.loading(options?.loadingMessage ?? "Thinking through your canvas…", "chat");
+      try {
+        await persist();
+        // A drafted plan always lands in its own fresh thread so it's easy to find.
+        let chatId = options?.forceNewChat ? null : activeChatId;
+        if (!chatId) {
+          const created = await createChat(project.id, options?.chatTitle);
+          chatId = created.thread.id;
+          setChats((current) => [created.thread, ...current.filter((chat) => chat.id !== created.thread.id)]);
+          setActiveChatId(chatId);
+          setMessages([]);
+        }
+
+        const messageContent = content.trim();
+        const result = await sendChatMessage({ projectId: project.id, chatId, content: messageContent });
+        setChats((current) => [result.thread, ...current.filter((chat) => chat.id !== result.thread.id)]);
+        setMessages(result.messages);
+        toast.success("Answer ready", "chat");
+      } catch (error) {
+        setQuestion(content.trim());
+        setSaveState("error");
+        toast.error("The AI didn’t respond — try again", "chat", errorDetail(error));
+      } finally {
+        setIsSending(false);
+      }
+    },
+    [activeChatId, aiBusy, persist, project.id],
+  );
 
   const runAnalysis = useCallback(async () => {
     const content = question.trim();
@@ -499,25 +781,63 @@ export function CanvasPage() {
     await sendCanvasMessage(content);
   }, [question, sendCanvasMessage]);
 
-  const requestImpactPlan = useCallback(
-    (node: CanvasFlowNode) => {
-      const impact = node.data.impact;
-      if (!impact) {
+  // Opens a fresh chat about a node. With an instruction it discusses that; left
+  // blank on a flagged node it drafts a structured update plan; otherwise a general
+  // walkthrough. Each lands in its own thread so it's easy to find.
+  const chatAboutNode = useCallback(
+    (node: CanvasFlowNode, instruction?: string) => {
+      if (aiBusy) {
         return;
       }
       setIsChatCollapsed(false);
       setQuestion("");
+      const text = instruction?.trim();
+      const impact = node.data.impact;
+
+      if (text) {
+        void sendCanvasMessage(
+          [
+            `About the node "${node.data.title}" (${node.id}):`,
+            text,
+            "Use only the saved canvas. Do not change canvas nodes automatically.",
+          ].join("\n"),
+          {
+            forceNewChat: true,
+            chatTitle: `Chat · ${node.data.title}`,
+            loadingMessage: "Thinking it through…",
+          },
+        );
+        return;
+      }
+
+      if (impact) {
+        void sendCanvasMessage(
+          [
+            `Draft an update plan for the flagged node "${node.data.title}" (${node.id}).`,
+            `Impact status: ${impact.status}.`,
+            `Impact reason: ${impact.reason}`,
+            `Source node: ${impact.sourceNodeId}. Source version: ${impact.sourceVersionId}.`,
+            "Use only the saved canvas. Include why it was flagged, what needs review, suggested requirement edits, implementation implications, tests or verification, and open questions. Do not change canvas nodes automatically.",
+          ].join("\n"),
+          {
+            forceNewChat: true,
+            chatTitle: `Plan · ${node.data.title}`,
+            loadingMessage: "Drafting a plan in a new chat…",
+          },
+        );
+        return;
+      }
+
       void sendCanvasMessage(
-        [
-          `Draft an update plan for the flagged node "${node.data.title}" (${node.id}).`,
-          `Impact status: ${impact.status}.`,
-          `Impact reason: ${impact.reason}`,
-          `Source node: ${impact.sourceNodeId}. Source version: ${impact.sourceVersionId}.`,
-          "Use only the saved canvas. Include why it was flagged, what needs review, suggested requirement edits, implementation implications, tests or verification, and open questions. Do not change canvas nodes automatically.",
-        ].join("\n"),
+        `Walk me through the node "${node.data.title}" (${node.id}) and suggest how to strengthen it. Use only the saved canvas. Do not change canvas nodes automatically.`,
+        {
+          forceNewChat: true,
+          chatTitle: `Chat · ${node.data.title}`,
+          loadingMessage: "Thinking it through…",
+        },
       );
     },
-    [sendCanvasMessage],
+    [aiBusy, sendCanvasMessage],
   );
 
   const startNewChat = useCallback(async () => {
@@ -605,6 +925,41 @@ export function CanvasPage() {
     },
     [highlightCitations, nodes, setCenter],
   );
+
+  // Fit View focuses the current selection when present, otherwise the whole canvas.
+  const handleFitView = useCallback(() => {
+    if (activeNodeIds.length > 0) {
+      fitView({ nodes: activeNodeIds.map((id) => ({ id })), padding: 0.35, duration: 320 });
+    } else {
+      fitView({ padding: 0.18, duration: 320 });
+    }
+  }, [activeNodeIds, fitView]);
+
+  // Focus mode hides both side panels for a distraction-free canvas.
+  const toggleFocusMode = useCallback(() => {
+    setIsChatCollapsed((collapsed) => {
+      const next = !collapsed;
+      setIsInspectorCollapsed(next);
+      return next;
+    });
+  }, []);
+
+  // Refresh the "saved Xs ago" label while the canvas sits idle and saved.
+  useEffect(() => {
+    if (saveState !== "saved" || lastSavedAt == null) {
+      return;
+    }
+    const timer = window.setInterval(() => setSavedTick((tick) => tick + 1), 20000);
+    return () => window.clearInterval(timer);
+  }, [saveState, lastSavedAt]);
+
+  const savedLabel = useMemo(() => {
+    void savedTick;
+    if (lastSavedAt == null) {
+      return "All changes saved";
+    }
+    return `Saved ${formatRelativeTime(lastSavedAt)}`;
+  }, [lastSavedAt, savedTick]);
 
   const handleSelectProject = useCallback(
     async (selectedProjectId: string) => {
@@ -728,9 +1083,10 @@ export function CanvasPage() {
         dirtyRef.current = true;
         await persist();
         fitView({ padding: 0.2, duration: 320 });
-      } catch {
+      } catch (error) {
         setSaveState("error");
         setShowProjectPicker(true);
+        toast.error("Couldn’t generate the project", "generate", errorDetail(error));
       } finally {
         setIsLoadingProject(false);
         setProjectLoadingLabel("Loading project...");
@@ -747,7 +1103,7 @@ export function CanvasPage() {
 
   const requestSuggestions = useCallback(
     async (targetNodeId?: string, instruction?: string) => {
-      if (!project.id || isSuggesting) {
+      if (!project.id || aiBusy) {
         return;
       }
       setIsSuggesting(true);
@@ -762,21 +1118,21 @@ export function CanvasPage() {
           focusNode(targetNodeId);
         }
         if (result.changes.length === 0) {
-          toast.success("Canvas looks solid — no changes to suggest", "suggest");
+          toast.success("No changes to suggest — your canvas looks solid", "suggest");
         } else {
           toast.success(
-            `${result.changes.length} idea${result.changes.length === 1 ? "" : "s"} ready to review ✨`,
+            `${result.changes.length} suggestion${result.changes.length === 1 ? "" : "s"} ready to review`,
             "suggest",
           );
         }
-      } catch {
+      } catch (error) {
         setSaveState("error");
-        toast.error("The AI couldn’t reach the canvas — try again", "suggest");
+        toast.error("Couldn’t reach the AI — try again", "suggest", errorDetail(error));
       } finally {
         setIsSuggesting(false);
       }
     },
-    [focusNode, isSuggesting, persist, project.id, screenToFlowPosition],
+    [aiBusy, focusNode, persist, project.id, screenToFlowPosition],
   );
 
   const applyAcceptance = useCallback(
@@ -814,19 +1170,20 @@ export function CanvasPage() {
       }
       for (const change of current.changes) {
         if (change.op === "update_node" && accepted.has(change.id)) {
-          nextNodes = nextNodes.map((node) =>
-            node.id === change.nodeId
-              ? {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    title: change.titleAfter ?? node.data.title,
-                    fields: { ...node.data.fields, content: change.contentAfter ?? node.data.fields.content },
-                    updatedAt: now,
-                  },
-                }
-              : node,
-          );
+          nextNodes = nextNodes.map((node) => {
+            if (node.id !== change.nodeId) {
+              return node;
+            }
+            // Accepting the fix resolves the flag — drop impact so it clears immediately.
+            const nextData = {
+              ...node.data,
+              title: change.titleAfter ?? node.data.title,
+              fields: { ...node.data.fields, content: change.contentAfter ?? node.data.fields.content },
+              updatedAt: now,
+            };
+            delete nextData.impact;
+            return { ...node, data: nextData };
+          });
         }
       }
 
@@ -899,7 +1256,7 @@ export function CanvasPage() {
   const acceptChange = useCallback(
     (changeId: string) => {
       applyAcceptance([changeId]);
-      toast.success("Suggestion woven into the canvas ✓", "suggest-apply");
+      toast.success("Suggestion applied to the canvas", "suggest-apply");
     },
     [applyAcceptance],
   );
@@ -907,7 +1264,7 @@ export function CanvasPage() {
     if (proposal) {
       const count = proposal.changes.length;
       applyAcceptance(proposal.changes.map((change) => change.id));
-      toast.success(`${count} suggestion${count === 1 ? "" : "s"} woven in ✓`, "suggest-apply");
+      toast.success(`${count} suggestion${count === 1 ? "" : "s"} applied to the canvas`, "suggest-apply");
     }
   }, [applyAcceptance, proposal]);
   const dismissProposal = useCallback(() => setProposal(null), []);
@@ -989,7 +1346,7 @@ export function CanvasPage() {
       className={[
         "canvas-shell",
         isChatCollapsed ? "is-chat-collapsed" : "",
-        !selectedNode ? "is-inspector-hidden" : "",
+        !selectedNode && !selectedEdge ? "is-inspector-hidden" : "",
         selectedNode && isInspectorCollapsed ? "is-inspector-collapsed" : "",
       ]
         .filter(Boolean)
@@ -997,10 +1354,12 @@ export function CanvasPage() {
     >
       <header className="topbar">
         <div>
-          <h1>
-            <Sparkles size={18} />
-            {project.name}
-          </h1>
+          <ProjectSwitcher
+            projects={projects}
+            currentId={project.id}
+            currentName={project.name}
+            onSelect={(id) => void handleSelectProject(id)}
+          />
           {project.description ? <p>{project.description}</p> : null}
         </div>
         <div className={`save-state save-state-${saveState}`}>
@@ -1011,13 +1370,21 @@ export function CanvasPage() {
           )}
           <span>
             {saveState === "loading"
-              ? "Syncing…"
+              ? "Loading…"
               : saveState === "saving"
-                ? "Syncing to the canvas…"
+                ? "Saving…"
                 : saveState === "error"
                   ? "Couldn’t save"
-                  : "All synced"}
+                  : savedLabel}
           </span>
+          <Button
+            icon={isChatCollapsed ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            variant="ghost"
+            onClick={toggleFocusMode}
+            title={isChatCollapsed ? "Exit focus mode" : "Focus mode — hide side panels"}
+          >
+            Focus
+          </Button>
           <Button icon={<Plug size={14} />} variant="ghost" onClick={() => setIsConnectOpen(true)}>
             Connect
           </Button>
@@ -1042,6 +1409,7 @@ export function CanvasPage() {
           onReconnect={reconnectEdgeEndpoint}
           isValidConnection={isValidConnection}
           onSelectionChange={handleSelectionChange}
+          onNodeDoubleClick={(_, node) => focusNode(node.id)}
           fitView
           snapToGrid
           snapGrid={[16, 16]}
@@ -1059,6 +1427,28 @@ export function CanvasPage() {
             style={{ background: "rgb(10 16 32 / 88%)" }}
           />
         </ReactFlow>
+        {displayNodes.length === 0 && !isLoadingProject ? (
+          <div className="canvas-empty-hint">
+            <p>This canvas is empty.</p>
+            <span>Start mapping your project, or generate a plan with AI.</span>
+            <div className="canvas-empty-actions">
+              <button type="button" onClick={() => handleAddNode("project_contract")}>
+                Add Project Contract
+              </button>
+              <button type="button" onClick={() => handleAddNode("requirement")}>
+                Add Requirement
+              </button>
+              <button type="button" onClick={() => void requestSuggestions()} disabled={aiBusy}>
+                Ask AI for ideas
+              </button>
+            </div>
+          </div>
+        ) : null}
+        {nodes.length > 0 ? (
+          <div className="canvas-overlay-controls">
+            <CanvasTypeFilter active={typeFilter} onToggle={toggleTypeFilter} onClear={clearTypeFilter} />
+          </div>
+        ) : null}
       </section>
 
       {selectedNode && !isInspectorCollapsed ? (
@@ -1068,8 +1458,9 @@ export function CanvasPage() {
           activeNode={selectedNode}
           saveState={saveState}
           isSuggesting={isSuggesting}
+          aiBusy={aiBusy}
           onSaveNode={saveNodeVersion}
-          onRequestImpactPlan={requestImpactPlan}
+          onChatAboutNode={chatAboutNode}
           onRequestSuggestions={(nodeId, instruction) => void requestSuggestions(nodeId, instruction)}
           onCollapse={() => setIsInspectorCollapsed(true)}
         />
@@ -1083,12 +1474,22 @@ export function CanvasPage() {
         </aside>
       ) : null}
 
+      {!selectedNode && selectedEdge ? (
+        <EdgeInspector
+          edge={selectedEdge}
+          nodes={nodes}
+          onUpdateLabel={updateEdgeLabel}
+          onCollapse={() => setActiveEdgeIds([])}
+        />
+      ) : null}
+
       <CanvasAiPanel
         chats={chats}
         activeChatId={activeChatId}
         messages={messages}
         question={question}
         isSending={isSending}
+        aiBusy={aiBusy}
         isCreatingChat={isCreatingChat}
         loadingChatId={loadingChatId}
         onQuestionChange={setQuestion}
@@ -1104,12 +1505,16 @@ export function CanvasPage() {
 
       <CanvasToolbar
         onAddNode={handleAddNode}
-        onFitView={() => fitView({ padding: 0.18 })}
+        onFitView={handleFitView}
         onAutoArrange={autoArrangeNodes}
         onExportImage={exportCanvasImage}
+        onExportMarkdown={exportCanvasMarkdown}
+        onCopyMarkdown={() => void copyCanvasMarkdown()}
+        onExportJson={exportCanvasJson}
+        onImportJson={importCanvasJson}
         onSuggest={() => void requestSuggestions()}
-        isSuggesting={isSuggesting}
-        onSave={() => void persist()}
+        aiBusy={aiBusy}
+        onSave={() => void handleManualSave()}
         onLoadDemo={() => void handleLoadDemo()}
         onDeleteItems={deleteActiveItems}
         activeItemCount={activeNodeIds.length + activeEdgeIds.length}
@@ -1127,17 +1532,38 @@ export function CanvasPage() {
         />
       ) : null}
 
+      {isCommandOpen ? (
+        <Suspense fallback={null}>
+          <CommandPalette
+            nodes={nodes}
+            onSelect={focusNode}
+            onHighlight={highlightCitations}
+            onClose={() => setIsCommandOpen(false)}
+          />
+        </Suspense>
+      ) : null}
+
+      {isShortcutsOpen ? (
+        <Suspense fallback={null}>
+          <ShortcutsOverlay onClose={() => setIsShortcutsOpen(false)} />
+        </Suspense>
+      ) : null}
+
       {isConnectOpen ? (
-        <ConnectAgentModal project={project} onClose={() => setIsConnectOpen(false)} />
+        <Suspense fallback={null}>
+          <ConnectAgentModal project={project} onClose={() => setIsConnectOpen(false)} />
+        </Suspense>
       ) : null}
 
       {isHandoffOpen ? (
-        <DeveloperHandoffPanel
-          project={project}
-          nodes={nodes}
-          edges={edges}
-          onClose={() => setIsHandoffOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <DeveloperHandoffPanel
+            project={project}
+            nodes={nodes}
+            edges={edges}
+            onClose={() => setIsHandoffOpen(false)}
+          />
+        </Suspense>
       ) : null}
     </main>
   );

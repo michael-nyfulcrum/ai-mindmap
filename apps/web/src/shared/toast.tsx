@@ -2,15 +2,22 @@ import { useSyncExternalStore } from "react";
 
 export type ToastStatus = "loading" | "success" | "error";
 
+export type ToastAction = {
+  label: string;
+  onClick: () => void;
+};
+
 export type Toast = {
   id: string;
   status: ToastStatus;
   message: string;
   detail?: string;
+  action?: ToastAction;
 };
 
 const SUCCESS_MS = 2200;
 const ERROR_MS = 4200;
+const ACTION_MS = 6500;
 
 let toasts: Toast[] = [];
 let counter = 0;
@@ -37,22 +44,25 @@ function scheduleDismiss(id: string, ms: number) {
   timers.set(id, window.setTimeout(() => dismiss(id), ms));
 }
 
-function show(status: ToastStatus, message: string, id?: string, detail?: string): string {
+function show(status: ToastStatus, message: string, id?: string, detail?: string, action?: ToastAction): string {
   const toastId = id ?? `toast_${++counter}`;
   const existing = toasts.find((toast) => toast.id === toastId);
   if (existing) {
     existing.status = status;
     existing.message = message;
     existing.detail = detail;
+    existing.action = action;
   } else {
-    toasts.push({ id: toastId, status, message, detail });
+    toasts.push({ id: toastId, status, message, detail, action });
   }
-  if (status === "success") {
-    scheduleDismiss(toastId, SUCCESS_MS);
-  } else if (status === "error") {
-    scheduleDismiss(toastId, ERROR_MS);
-  } else {
+  if (status === "loading") {
     clearTimer(toastId); // loading persists until replaced or dismissed
+  } else if (action) {
+    scheduleDismiss(toastId, ACTION_MS); // give the user time to act
+  } else if (status === "success") {
+    scheduleDismiss(toastId, SUCCESS_MS);
+  } else {
+    scheduleDismiss(toastId, ERROR_MS);
   }
   emit();
   return toastId;
@@ -68,8 +78,10 @@ function dismiss(id: string) {
 
 export const toast = {
   loading: (message: string, id?: string, detail?: string) => show("loading", message, id, detail),
-  success: (message: string, id?: string, detail?: string) => show("success", message, id, detail),
-  error: (message: string, id?: string, detail?: string) => show("error", message, id, detail),
+  success: (message: string, id?: string, detail?: string, action?: ToastAction) =>
+    show("success", message, id, detail, action),
+  error: (message: string, id?: string, detail?: string, action?: ToastAction) =>
+    show("error", message, id, detail, action),
   dismiss,
 };
 

@@ -145,6 +145,7 @@ function SuggestionRow({ change, onAccept, onReject, onFocus }: SuggestionRowPro
         <div className="suggestion-row-diff">
           <DiffStat before={change.contentBefore ?? ""} after={change.contentAfter ?? ""} />
           <DiffView
+            split
             before={change.contentBefore ?? ""}
             after={change.contentAfter ?? ""}
             emptyLabel="No content change."

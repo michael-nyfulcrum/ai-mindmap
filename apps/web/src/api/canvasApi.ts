@@ -10,10 +10,27 @@ type CreateProjectInput = {
   edges?: CanvasSnapshot["edges"];
 };
 
+/**
+ * Build an Error that prefers the server-provided `detail` (FastAPI returns
+ * useful messages like "Upload is too large"), falling back to a generic
+ * message when the response has no readable detail.
+ */
+async function readError(response: Response, fallback: string): Promise<Error> {
+  try {
+    const body = await response.json();
+    if (body && typeof body.detail === "string" && body.detail.trim()) {
+      return new Error(body.detail);
+    }
+  } catch {
+    // Non-JSON or empty body — fall back to the generic message.
+  }
+  return new Error(fallback);
+}
+
 export async function listProjects() {
   const response = await fetch(`${API_BASE_URL}/api/projects`);
   if (!response.ok) {
-    throw new Error("Failed to load projects");
+    throw await readError(response, "Failed to load projects");
   }
 
   return (await response.json()) as { projects: CanvasSnapshot["project"][] };
@@ -22,7 +39,7 @@ export async function listProjects() {
 export async function loadCanvas(projectId: string) {
   const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/canvas`);
   if (!response.ok) {
-    throw new Error("Failed to load canvas");
+    throw await readError(response, "Failed to load canvas");
   }
 
   return (await response.json()) as CanvasSnapshot;
@@ -36,7 +53,7 @@ export async function createProject(input: string | CreateProjectInput) {
     body: JSON.stringify(payload),
   });
   if (!response.ok) {
-    throw new Error("Failed to create project");
+    throw await readError(response, "Failed to create project");
   }
 
   return (await response.json()) as CanvasSnapshot;
@@ -49,7 +66,7 @@ export async function generateProject(prompt: string) {
     body: JSON.stringify({ prompt }),
   });
   if (!response.ok) {
-    throw new Error("Failed to generate project");
+    throw await readError(response, "Failed to generate project");
   }
 
   return (await response.json()) as {
@@ -67,7 +84,7 @@ export async function renameProject(projectId: string, name: string) {
     body: JSON.stringify({ name }),
   });
   if (!response.ok) {
-    throw new Error("Failed to rename project");
+    throw await readError(response, "Failed to rename project");
   }
 
   return (await response.json()) as CanvasProject;
@@ -78,7 +95,7 @@ export async function deleteProject(projectId: string) {
     method: "DELETE",
   });
   if (!response.ok) {
-    throw new Error("Failed to delete project");
+    throw await readError(response, "Failed to delete project");
   }
 }
 
@@ -89,7 +106,7 @@ export async function saveCanvas(snapshot: CanvasSnapshot, commitMessage?: strin
     body: JSON.stringify(commitMessage ? { ...snapshot, commitMessage } : snapshot),
   });
   if (!response.ok) {
-    throw new Error("Failed to save canvas");
+    throw await readError(response, "Failed to save canvas");
   }
 
   return (await response.json()) as CanvasSnapshot;
@@ -102,7 +119,7 @@ export async function analyzeCanvas(input: { projectId: string; question: string
     body: JSON.stringify({ question: input.question }),
   });
   if (!response.ok) {
-    throw new Error("Failed to analyze canvas");
+    throw await readError(response, "Failed to analyze canvas");
   }
 
   return (await response.json()) as AnalysisResponse;
@@ -115,7 +132,7 @@ export async function suggestChanges(input: { projectId: string; targetNodeId?: 
     body: JSON.stringify({ targetNodeId: input.targetNodeId ?? null, instruction: input.instruction ?? null }),
   });
   if (!response.ok) {
-    throw new Error("Failed to get suggestions");
+    throw await readError(response, "Failed to get suggestions");
   }
 
   return (await response.json()) as SuggestionResponse;
@@ -124,7 +141,7 @@ export async function suggestChanges(input: { projectId: string; targetNodeId?: 
 export async function listNodeVersions(input: { projectId: string; nodeId: string }) {
   const response = await fetch(`${API_BASE_URL}/api/projects/${input.projectId}/nodes/${input.nodeId}/versions`);
   if (!response.ok) {
-    throw new Error("Failed to load version history");
+    throw await readError(response, "Failed to load version history");
   }
 
   return (await response.json()) as { versions: ContractChangeVersion[] };
@@ -133,7 +150,7 @@ export async function listNodeVersions(input: { projectId: string; nodeId: strin
 export async function listChats(projectId: string) {
   const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/chats`);
   if (!response.ok) {
-    throw new Error("Failed to load chats");
+    throw await readError(response, "Failed to load chats");
   }
 
   return (await response.json()) as { chats: ChatThread[] };
@@ -146,7 +163,7 @@ export async function createChat(projectId: string, title = "New chat") {
     body: JSON.stringify({ title }),
   });
   if (!response.ok) {
-    throw new Error("Failed to create chat");
+    throw await readError(response, "Failed to create chat");
   }
 
   return (await response.json()) as { thread: ChatThread; messages: ChatMessage[] };
@@ -155,7 +172,7 @@ export async function createChat(projectId: string, title = "New chat") {
 export async function loadChat(projectId: string, chatId: string) {
   const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/chats/${chatId}`);
   if (!response.ok) {
-    throw new Error("Failed to load chat");
+    throw await readError(response, "Failed to load chat");
   }
 
   return (await response.json()) as { thread: ChatThread; messages: ChatMessage[] };
@@ -168,7 +185,7 @@ export async function sendChatMessage(input: { projectId: string; chatId: string
     body: JSON.stringify({ content: input.content }),
   });
   if (!response.ok) {
-    throw new Error("Failed to send chat message");
+    throw await readError(response, "Failed to send chat message");
   }
 
   return (await response.json()) as {
@@ -183,7 +200,7 @@ export async function deleteChat(projectId: string, chatId: string) {
     method: "DELETE",
   });
   if (!response.ok) {
-    throw new Error("Failed to delete chat");
+    throw await readError(response, "Failed to delete chat");
   }
 }
 
@@ -194,7 +211,7 @@ export async function uploadAsset(input: { projectId: string; filename: string; 
     body: JSON.stringify(input),
   });
   if (!response.ok) {
-    throw new Error("Failed to upload asset");
+    throw await readError(response, "Failed to upload asset");
   }
 
   const upload = (await response.json()) as {

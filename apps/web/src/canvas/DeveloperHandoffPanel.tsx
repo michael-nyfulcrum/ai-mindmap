@@ -2,6 +2,8 @@ import { Clipboard, X } from "lucide-react";
 import type { CanvasFlowEdge, CanvasFlowNode, CanvasProject } from "./canvasTypes";
 import { Button } from "../shared/ui/Button";
 import { Panel } from "../shared/ui/Panel";
+import { copyText } from "../shared/clipboard";
+import { toast } from "../shared/toast";
 
 type DeveloperHandoffPanelProps = {
   project: CanvasProject;
@@ -48,7 +50,13 @@ export function DeveloperHandoffPanel({ project, nodes, edges, onClose }: Develo
               icon={<Clipboard size={15} />}
               variant="primary"
               onClick={() => {
-                void navigator.clipboard?.writeText(prompt);
+                void copyText(prompt).then((ok) => {
+                  if (ok) {
+                    toast.success("Agent prompt copied");
+                  } else {
+                    toast.error("Couldn't copy to clipboard", undefined, "Select the text and copy manually.");
+                  }
+                });
               }}
             >
               Copy

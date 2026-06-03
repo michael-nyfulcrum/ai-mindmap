@@ -3,7 +3,6 @@ import {
   Brain,
   CheckSquare,
   Database,
-  Download,
   FilePlus2,
   ImagePlus,
   Lightbulb,
@@ -16,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "../shared/ui/Button";
 import { IconButton } from "../shared/ui/IconButton";
+import { ExportMenu } from "./ExportMenu";
 import type { CanvasNodeType } from "./canvasTypes";
 
 type CanvasToolbarProps = {
@@ -23,8 +23,12 @@ type CanvasToolbarProps = {
   onFitView: () => void;
   onAutoArrange: () => void;
   onExportImage: () => void;
+  onExportMarkdown: () => void;
+  onCopyMarkdown?: () => void;
+  onExportJson?: () => void;
+  onImportJson?: () => void;
   onSuggest: () => void;
-  isSuggesting: boolean;
+  aiBusy: boolean;
   onSave: () => void;
   onLoadDemo: () => void;
   onDeleteItems: () => void;
@@ -45,8 +49,12 @@ export const CanvasToolbar = memo(function CanvasToolbar({
   onFitView,
   onAutoArrange,
   onExportImage,
+  onExportMarkdown,
+  onCopyMarkdown,
+  onExportJson,
+  onImportJson,
   onSuggest,
-  isSuggesting,
+  aiBusy,
   onSave,
   onLoadDemo,
   onDeleteItems,
@@ -73,11 +81,17 @@ export const CanvasToolbar = memo(function CanvasToolbar({
           icon={<Lightbulb size={18} />}
           label="AI suggest changes"
           onClick={onSuggest}
-          disabled={isSuggesting}
+          disabled={aiBusy}
           className="toolbar-suggest-btn"
         />
-        <IconButton icon={<Download size={18} />} label="Export PNG" onClick={onExportImage} />
-        <IconButton icon={<Save size={18} />} label="Save" onClick={onSave} />
+        <ExportMenu
+          onExportImage={onExportImage}
+          onExportMarkdown={onExportMarkdown}
+          onCopyMarkdown={onCopyMarkdown}
+          onExportJson={onExportJson}
+          onImportJson={onImportJson}
+        />
+        <IconButton icon={<Save size={18} />} label="Save (⌘/Ctrl+S)" onClick={onSave} />
         <IconButton
           icon={<Trash2 size={18} />}
           label="Delete"

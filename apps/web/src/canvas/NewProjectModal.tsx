@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ArrowRight, FilePlus2, LayoutTemplate, Sparkles, Wand2, X } from "lucide-react";
 import { PROJECT_TEMPLATES } from "./projectTemplates";
+import { useModalDismiss } from "../shared/useModalDismiss";
 
 type NewProjectModalProps = {
   isLoading: boolean;
@@ -24,6 +25,10 @@ export function NewProjectModal({
   onCreateTemplate,
 }: NewProjectModalProps) {
   const [prompt, setPrompt] = useState("");
+  const handleClose = useCallback(() => {
+    if (!isLoading) onClose();
+  }, [isLoading, onClose]);
+  const dialogRef = useModalDismiss<HTMLDivElement>(handleClose);
 
   function submitPrompt() {
     const trimmed = prompt.trim();
@@ -39,7 +44,7 @@ export function NewProjectModal({
 
   return (
     <div className="tutorial-backdrop" onClick={handleBackdropClick}>
-      <div className="new-project-modal" role="dialog" aria-modal="true" aria-label="New project">
+      <div ref={dialogRef} tabIndex={-1} className="new-project-modal" role="dialog" aria-modal="true" aria-label="New project">
         <div className="tutorial-header">
           <h2>New project</h2>
           <button onClick={onClose} aria-label="Close" disabled={isLoading}>

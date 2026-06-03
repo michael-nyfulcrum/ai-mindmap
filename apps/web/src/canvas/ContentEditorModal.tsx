@@ -1,13 +1,10 @@
-import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Eye, GitCompareArrows, Pencil, X } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { X } from "lucide-react";
 import { Button } from "../shared/ui/Button";
 import { Panel } from "../shared/ui/Panel";
-import { DiffStat, DiffView } from "./DiffView";
-
-type EditorTab = "edit" | "preview" | "diff";
+import { useModalDismiss } from "../shared/useModalDismiss";
+import { DiffStat } from "./DiffView";
+import { RichContentEditor } from "./RichContentEditor";
 
 type ContentEditorModalProps = {
   title: string;
@@ -19,29 +16,20 @@ type ContentEditorModalProps = {
 };
 
 export function ContentEditorModal({ title, typeLabel, value, baseline, onChange, onClose }: ContentEditorModalProps) {
-  const [tab, setTab] = useState<EditorTab>("edit");
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
-
-  useEffect(() => {
-    if (tab === "edit") {
-      textareaRef.current?.focus();
-    }
-  }, [tab]);
+  const dialogRef = useModalDismiss<HTMLDivElement>(onClose);
 
   const isDirty = value !== baseline;
 
   return createPortal(
-    <div className="editor-backdrop" role="dialog" aria-modal="true" aria-label={`Edit ${title}`} onMouseDown={onClose}>
+    <div
+      ref={dialogRef}
+      tabIndex={-1}
+      className="editor-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Edit ${title}`}
+      onMouseDown={onClose}
+    >
       <Panel className="editor-modal">
         <div className="editor-modal-inner" onMouseDown={(event) => event.stopPropagation()}>
           <header className="editor-head">
@@ -55,46 +43,14 @@ export function ContentEditorModal({ title, typeLabel, value, baseline, onChange
             </div>
           </header>
 
-          <nav className="editor-tabs" aria-label="Editor view">
-            <button type="button" className={tabClass(tab === "edit")} onClick={() => setTab("edit")}>
-              <Pencil size={13} /> Edit
-            </button>
-            <button type="button" className={tabClass(tab === "preview")} onClick={() => setTab("preview")}>
-              <Eye size={13} /> Preview
-            </button>
-            <button type="button" className={tabClass(tab === "diff")} onClick={() => setTab("diff")} disabled={!isDirty}>
-              <GitCompareArrows size={13} /> Changes
-            </button>
-          </nav>
-
-          <div className="editor-body">
-            {tab === "edit" ? (
-              <textarea
-                ref={textareaRef}
-                className="editor-surface"
-                value={value}
-                onChange={(event) => onChange(event.target.value)}
-                placeholder="Write the contract, requirement, or note in Markdown…"
-                spellCheck
-              />
-            ) : null}
-
-            {tab === "preview" ? (
-              <div className="editor-preview chat-markdown">
-                {value.trim() ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{value}</ReactMarkdown>
-                ) : (
-                  <p className="editor-empty">Nothing to preview yet.</p>
-                )}
-              </div>
-            ) : null}
-
-            {tab === "diff" ? (
-              <div className="editor-diff">
-                <DiffView before={baseline} after={value} emptyLabel="No unsaved changes in this session." />
-              </div>
-            ) : null}
-          </div>
+          <RichContentEditor
+            className="rich-editor-modal"
+            value={value}
+            baseline={baseline}
+            onChange={onChange}
+            placeholder="Write the contract, requirement, or note in Markdown…"
+            autoFocus
+          />
 
           <footer className="editor-foot">
             <span className={`editor-status ${isDirty ? "is-dirty" : ""}`}>
@@ -109,8 +65,4 @@ export function ContentEditorModal({ title, typeLabel, value, baseline, onChange
     </div>,
     document.body,
   );
-}
-
-function tabClass(active: boolean) {
-  return ["editor-tab", active ? "is-active" : ""].filter(Boolean).join(" ");
 }

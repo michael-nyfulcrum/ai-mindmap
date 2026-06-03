@@ -13,6 +13,7 @@ type CanvasAiPanelProps = {
   messages: ChatMessage[];
   question: string;
   isSending: boolean;
+  aiBusy: boolean;
   isCreatingChat: boolean;
   loadingChatId: string | null;
   onQuestionChange: (question: string) => void;
@@ -32,6 +33,7 @@ export const CanvasAiPanel = memo(function CanvasAiPanel({
   messages,
   question,
   isSending,
+  aiBusy,
   isCreatingChat,
   loadingChatId,
   onQuestionChange,
@@ -109,7 +111,7 @@ export const CanvasAiPanel = memo(function CanvasAiPanel({
                   onNewChat();
                   setShowHistory(false);
                 }}
-                disabled={isCreatingChat}
+                disabled={isCreatingChat || aiBusy}
               >
                 <Plus size={15} />
                 <span>New chat</span>
@@ -156,7 +158,7 @@ export const CanvasAiPanel = memo(function CanvasAiPanel({
         </div>
 
         <div className="chat-topbar-actions">
-          <button type="button" onClick={onNewChat} disabled={isCreatingChat} aria-label="New chat" title="New chat">
+          <button type="button" onClick={onNewChat} disabled={isCreatingChat || aiBusy} aria-label="New chat" title="New chat">
             <Plus size={15} />
           </button>
           <button type="button" onClick={onToggleCollapsed} aria-label="Collapse chats" title="Collapse chats">
@@ -225,7 +227,7 @@ export const CanvasAiPanel = memo(function CanvasAiPanel({
             <button
               type="submit"
               className="chat-composer-send"
-              disabled={!question.trim() || isSending}
+              disabled={!question.trim() || aiBusy}
               aria-label="Send message"
               title="Send"
             >

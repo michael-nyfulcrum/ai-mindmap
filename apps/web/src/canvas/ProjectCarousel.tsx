@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Check, HelpCircle, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import type { CanvasProject } from "./canvasTypes";
 import { GalaxyBackground } from "./GalaxyBackground";
-import { NewProjectModal } from "./NewProjectModal";
-import { TutorialDialog } from "./TutorialDialog";
+
+const NewProjectModal = lazy(() => import("./NewProjectModal").then((m) => ({ default: m.NewProjectModal })));
+const TutorialDialog = lazy(() => import("./TutorialDialog").then((m) => ({ default: m.TutorialDialog })));
 
 type ProjectCarouselProps = {
   projects: CanvasProject[];
@@ -111,22 +112,28 @@ export function ProjectCarousel({
       </main>
 
       {showNewProject ? (
-        <NewProjectModal
-          isLoading={isLoading}
-          onClose={() => setShowNewProject(false)}
-          onGenerate={(prompt) => onGenerateProject(prompt)}
-          onCreateBlank={() => {
-            setShowNewProject(false);
-            onCreateProject();
-          }}
-          onCreateTemplate={(id) => {
-            setShowNewProject(false);
-            onCreateProject(id);
-          }}
-        />
+        <Suspense fallback={null}>
+          <NewProjectModal
+            isLoading={isLoading}
+            onClose={() => setShowNewProject(false)}
+            onGenerate={(prompt) => onGenerateProject(prompt)}
+            onCreateBlank={() => {
+              setShowNewProject(false);
+              onCreateProject();
+            }}
+            onCreateTemplate={(id) => {
+              setShowNewProject(false);
+              onCreateProject(id);
+            }}
+          />
+        </Suspense>
       ) : null}
 
-      {showTutorial ? <TutorialDialog onClose={() => setShowTutorial(false)} /> : null}
+      {showTutorial ? (
+        <Suspense fallback={null}>
+          <TutorialDialog onClose={() => setShowTutorial(false)} />
+        </Suspense>
+      ) : null}
     </>
   );
 }

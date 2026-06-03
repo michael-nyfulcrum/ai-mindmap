@@ -5,9 +5,9 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "ghost" | "danger";
 };
 
-export function Button({ icon, children, variant = "secondary", className = "", ...props }: ButtonProps) {
+export function Button({ icon, children, variant = "secondary", className = "", type = "button", ...props }: ButtonProps) {
   return (
-    <button className={`button button-${variant} ${className}`} {...props}>
+    <button type={type} className={`button button-${variant} ${className}`} {...props}>
       {icon}
       {children ? <span>{children}</span> : null}
     </button>
