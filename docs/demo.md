@@ -1,13 +1,13 @@
-# ai-mindmap Demo
+# mindmap Demo
 
-Context Canvas is the single source of truth that closes the gap between
+mindmap is the single source of truth that closes the gap between
 business intent, engineering execution, and AI-assisted development. Teams map
 contracts, requirements, source references, decisions, and specs onto one living
 canvas that PMs can maintain, developers can trust, and coding agents can read
 through MCP.
 
 The sales story is simple: most AI productivity tooling starts at the codebase.
-Context Canvas starts earlier, where the intent is born. It turns requirements
+mindmap starts earlier, where the intent is born. It turns requirements
 into structured execution context, then turns that context into spec-driven
 delivery.
 
@@ -21,7 +21,7 @@ talk track in speaker notes.
 Visible slide:
 
 ```text
-Context Canvas
+mindmap
 One truth for PMs, developers, and AI
 ```
 
@@ -29,7 +29,7 @@ Speaker notes:
 
 Every software team has the same expensive problem: product intent lives in one
 place, developer execution lives somewhere else, and AI tools are forced to
-guess from whatever context we paste into them. Context Canvas closes that gap.
+guess from whatever context we paste into them. mindmap closes that gap.
 It turns contracts, requirements, decisions, sources, and specs into one living
 project map that PMs can maintain, developers can trust, and AI agents can read
 directly.
@@ -61,7 +61,7 @@ for humans and agents
 
 Speaker notes:
 
-Context Canvas is not another project board. It is a connected graph of
+mindmap is not another project board. It is a connected graph of
 contracts, requirements, source snapshots, notes, links, images, decisions, and
 now implementation specs. The relationships are the differentiator. When a
 requirement changes, the system understands what depends on it. That gives the
@@ -141,7 +141,7 @@ Context becomes execution
 Speaker notes:
 
 The future is not just AI writing more code. The future is AI executing the
-right spec from the right context. Context Canvas turns project knowledge into
+right spec from the right context. mindmap turns project knowledge into
 an execution layer. It keeps humans and AI aligned on the same live truth, then
 pushes that truth forward into spec-driven design, implementation, and change
 management.
@@ -154,7 +154,7 @@ AI-executable implementation context.
 
 Use these framing points:
 
-- Context Canvas is the project brain: contracts, requirements, decisions,
+- mindmap is the project brain: contracts, requirements, decisions,
   source evidence, and specs stay connected.
 - Spec-driven design is the accelerator: the canvas generates implementation
   specs with `FR-###` functional requirements, acceptance criteria, development
@@ -170,6 +170,23 @@ The competitive angle should be confident but defensible. This is not glued to
 Vercel, Supabase, or a proprietary platform workflow. A normal Linux server,
 Docker, DNS, and an OpenAI API key are enough for the live AI demo. Customers can
 run it on their own infrastructure without buying into a managed-hosting maze.
+
+## Executive Value Proposition
+
+Use this language when the room wants the bigger vision.
+
+mindmap is an AI-native delivery layer for modern software teams. It creates a
+context fabric across product, engineering, and agentic workflows so teams can
+move from business intent to implementation-ready specs without losing
+traceability. The canvas becomes the control plane for requirements, the spec
+becomes the execution contract, and MCP becomes the bridge into autonomous
+development.
+
+The productivity promise is not "AI writes code faster" in isolation. The
+promise is higher-throughput delivery with less context loss, tighter feedback
+loops, cleaner governance, and a repeatable product-to-code pipeline. It is
+spec-driven design, impact-aware change management, and agent-ready execution
+context in one operating model.
 
 ## Live Demo Story
 
@@ -282,7 +299,8 @@ Copy the spec handoff prompt from the spec node, or paste this version:
 Use the context-canvas MCP server as the source of truth.
 
 1. Call list_canvas_projects and pick the most recently updated project.
-2. Call get_canvas_spec for the latest spec node.
+2. Call get_canvas_spec with that project_id and omit spec_id to use the latest
+   spec node.
 3. Build a single self-contained index.html with inline CSS and vanilla JS that
    implements exactly the functional requirements in the spec.
 4. Cite each FR-### and canvas node ID in an HTML comment above the section that
@@ -344,7 +362,8 @@ app.
 
 1. Call get_canvas_context with task "apply the latest checkout requirement
    changes". Read the active impact flags and recent change summary.
-2. Call get_canvas_spec for the latest relevant spec if one exists.
+2. Call get_canvas_spec with that project_id and omit spec_id to use the latest
+   relevant spec if one exists.
 3. Update index.html so it matches the changed requirement and spec.
 4. Tell me exactly what changed and which canvas node, impact flag, or FR drove
    the change.

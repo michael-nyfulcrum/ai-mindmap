@@ -38,6 +38,19 @@ class CanvasDatabaseSettings:
 
 
 def load_canvas_database_settings() -> CanvasDatabaseSettings:
+    return CanvasDatabaseSettings(path=_resolve_canvas_db_path())
+
+
+def _resolve_canvas_db_path() -> Path:
+    # Mirror the API's resolution (context_canvas_api.db.database_path) so the
+    # MCP server and the API always open the same SQLite file. The shared
+    # Docker stack sets CONTEXT_CANVAS_DATABASE_URL, not CONTEXT_CANVAS_DB_PATH.
+    database_url = os.getenv("CONTEXT_CANVAS_DATABASE_URL", "").strip()
+    if database_url:
+        if database_url.startswith("sqlite:///"):
+            return Path(database_url.removeprefix("sqlite:///")).expanduser()
+        return Path(database_url).expanduser()
     configured = os.getenv("CONTEXT_CANVAS_DB_PATH", "").strip()
-    default_path = Path(__file__).resolve().parents[2] / "api" / "context-canvas.sqlite"
-    return CanvasDatabaseSettings(path=Path(configured).expanduser() if configured else default_path)
+    if configured:
+        return Path(configured).expanduser()
+    return Path(__file__).resolve().parents[2] / "api" / "context-canvas.sqlite"

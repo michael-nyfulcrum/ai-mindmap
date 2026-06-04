@@ -25,6 +25,24 @@ const SUGGEST_PRESETS: { label: string; instruction: string }[] = [
   { label: "Suggest related requirements", instruction: "Suggest related requirements" },
 ];
 
+// Spec nodes refine the generated spec rather than the underlying requirement.
+const SPEC_PRESETS: { label: string; instruction: string }[] = [
+  {
+    label: "Refine functional requirements",
+    instruction:
+      "Refine the functional requirements: make each FR a single, testable 'the system MUST…' statement with clear acceptance criteria.",
+  },
+  {
+    label: "Add development requirements",
+    instruction:
+      "Improve the Development Requirements section: list the technical work (data, API, UI, validation, integration, auth, testing) needed to build this spec.",
+  },
+  {
+    label: "Tighten acceptance criteria",
+    instruction: "Tighten the acceptance criteria so each one is specific, measurable, and testable.",
+  },
+];
+
 type CanvasInspectorProps = {
   projectId: string;
   projectName: string;
@@ -71,14 +89,16 @@ export const CanvasInspector = memo(function CanvasInspector({
   const audit = activeNode.data.audit;
   const impact = activeNode.data.impact;
   const savedContent = activeNode.data.fields.content ?? "";
-  // What the Improve action asks for: the user's own words, or — for a
-  // flagged node left blank — a fix grounded in why it was flagged.
+  const isSpecNode = activeNode.data.canvasType === "spec";
+  // What the Improve action asks for: the user's own words, or a sensible
+  // default — refine the spec, or fix the flag a node carries.
   const suggestInstruction =
     suggestPrompt.trim() ||
-    (impact
-      ? `Suggest a concrete content update for "${activeNode.data.title}". It is flagged ${impact.status}: ${impact.reason}`
-      : undefined);
-  const isSpecNode = activeNode.data.canvasType === "spec";
+    (isSpecNode
+      ? `Refine and improve the spec "${activeNode.data.title}": tighten the functional requirements (FR-###) and their acceptance criteria, and improve the development requirements. Return the full updated spec body.`
+      : impact
+        ? `Suggest a concrete content update for "${activeNode.data.title}". It is flagged ${impact.status}: ${impact.reason}`
+        : undefined);
   const handoffPrompt = buildSpecHandoffPrompt(projectId, projectName, activeNode);
   const isVersionedNode = ["project_contract", "requirement"].includes(activeNode.data.canvasType);
   const versions = isVersionedNode && versionResult.nodeId === activeNode.id ? versionResult.versions : [];
@@ -187,6 +207,76 @@ export const CanvasInspector = memo(function CanvasInspector({
           </section>
         ) : null}
 
+        <section className="inspector-section inspector-ai-actions">
+          <div className="inspector-section-head">
+            <h3>
+              <Sparkles size={13} /> AI actions
+            </h3>
+          </div>
+
+          <input
+            className="inspector-inline-input ai-action-input"
+            value={suggestPrompt}
+            placeholder={impact ? "What's on your mind? (or leave blank to fix the flag)" : "What's on your mind? (optional)"}
+            aria-label="AI instruction"
+            disabled={aiBusy}
+            onChange={(event) => setSuggestPrompt(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                onRequestSuggestions(activeNode.id, suggestInstruction);
+              }
+            }}
+          />
+
+          <div className="ai-action-chips">
+            {(isSpecNode ? SPEC_PRESETS : SUGGEST_PRESETS).map((preset) => (
+              <button
+                key={preset.label}
+                type="button"
+                className="ai-action-chip"
+                disabled={aiBusy}
+                onClick={() => setSuggestPrompt(preset.instruction)}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+
+          <p className="ai-action-hint">Your note above steers each action.</p>
+
+          <div className="ai-action-list">
+            <AiActionButton
+              icon={<MessagesSquare size={16} />}
+              label="Talk it through"
+              description="Open a focused chat thread about this node."
+              disabled={aiBusy}
+              onClick={() => onChatAboutNode(activeNode, suggestPrompt.trim() || undefined)}
+            />
+            <AiActionButton
+              primary
+              icon={isSuggesting ? <Spinner size={16} /> : <WandSparkles size={16} />}
+              label={isSuggesting ? "Improving…" : "Improve"}
+              description={
+                isSpecNode
+                  ? "Refine functional & development requirements — preview edits, then accept."
+                  : "Flesh out criteria, fill gaps & refine — preview edits, then accept."
+              }
+              disabled={aiBusy}
+              onClick={() => onRequestSuggestions(activeNode.id, suggestInstruction)}
+            />
+            {isSpecNode ? null : (
+              <AiActionButton
+                icon={<FileCode2 size={16} />}
+                label="Create spec"
+                description="Generate a Spec Kit spec node to hand to a coding agent."
+                disabled={aiBusy}
+                onClick={() => onCreateSpec(activeNode.id, suggestPrompt.trim() || undefined)}
+              />
+            )}
+          </div>
+        </section>
+
         {isSpecNode ? (
           <section className="inspector-section spec-handoff">
             <div className="inspector-section-head">
@@ -213,71 +303,7 @@ export const CanvasInspector = memo(function CanvasInspector({
               Copy prompt
             </Button>
           </section>
-        ) : (
-          <section className="inspector-section inspector-ai-actions">
-            <div className="inspector-section-head">
-              <h3>
-                <Sparkles size={13} /> AI actions
-              </h3>
-            </div>
-
-            <input
-              className="inspector-inline-input ai-action-input"
-              value={suggestPrompt}
-              placeholder={impact ? "What's on your mind? (or leave blank to fix the flag)" : "What's on your mind? (optional)"}
-              aria-label="AI instruction"
-              disabled={aiBusy}
-              onChange={(event) => setSuggestPrompt(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  onRequestSuggestions(activeNode.id, suggestInstruction);
-                }
-              }}
-            />
-
-            <div className="ai-action-chips">
-              {SUGGEST_PRESETS.map((preset) => (
-                <button
-                  key={preset.label}
-                  type="button"
-                  className="ai-action-chip"
-                  disabled={aiBusy}
-                  onClick={() => setSuggestPrompt(preset.instruction)}
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-
-            <p className="ai-action-hint">Your note above steers each action.</p>
-
-            <div className="ai-action-list">
-              <AiActionButton
-                icon={<MessagesSquare size={16} />}
-                label="Talk it through"
-                description="Open a focused chat thread about this node."
-                disabled={aiBusy}
-                onClick={() => onChatAboutNode(activeNode, suggestPrompt.trim() || undefined)}
-              />
-              <AiActionButton
-                primary
-                icon={isSuggesting ? <Spinner size={16} /> : <WandSparkles size={16} />}
-                label={isSuggesting ? "Improving…" : "Improve"}
-                description="Flesh out criteria, fill gaps & refine — preview edits, then accept."
-                disabled={aiBusy}
-                onClick={() => onRequestSuggestions(activeNode.id, suggestInstruction)}
-              />
-              <AiActionButton
-                icon={<FileCode2 size={16} />}
-                label="Create spec"
-                description="Generate a Spec Kit spec node to hand to a coding agent."
-                disabled={aiBusy}
-                onClick={() => onCreateSpec(activeNode.id, suggestPrompt.trim() || undefined)}
-              />
-            </div>
-          </section>
-        )}
+        ) : null}
 
         <div className="inspector-field">
           <span className="inspector-field-label">Tags</span>
