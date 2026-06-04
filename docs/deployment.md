@@ -12,9 +12,7 @@ SQLite and uploads live in the `context_canvas_data` Docker volume at `/data`.
 The demo deployment is deliberately vendor-neutral. It does not require Vercel,
 Supabase, a managed database, or product-specific hosting knowledge. The same
 Docker Compose stack can run locally or on any Linux server that supports
-Docker, with Caddy handling static files, reverse proxying, and HTTPS. See the
-[demo positioning guide](demo.md#demo-positioning) for the customer-facing
-portability message.
+Docker, with Caddy handling static files, reverse proxying, and HTTPS.
 
 ## Local Docker Demo
 

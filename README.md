@@ -69,8 +69,7 @@ make reset-db
 The demo stack is intentionally vendor-neutral: Vite/React, FastAPI, FastMCP,
 SQLite, Docker Compose, and Caddy. It does not require Vercel, Supabase, or a
 managed database account; the same setup runs locally or on a basic Linux
-server. See [Demo](docs/demo.md#demo-positioning) for the customer-facing
-positioning.
+server.
 
 ```sh
 cp .env.example .env
@@ -129,14 +128,12 @@ packaging, and backup commands.
 
 ## Documentation
 
-- [Demo](docs/demo.md)
 - [Git workflow](docs/git-workflow.md)
 - [Product requirements](docs/product-requirements.md)
 - [Current product spec and progress tracker](docs/context-canvas-product-spec.md)
 - [API documentation](docs/api.md)
 - [MCP documentation](docs/mcp.md)
 - [Persistence and local operations](docs/persistence.md)
-- [Task working sources](docs/task-working-sources.md)
 
 ## Environment
 
