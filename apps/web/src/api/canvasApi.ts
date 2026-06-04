@@ -1,4 +1,4 @@
-import type { AnalysisResponse, CanvasProject, CanvasSnapshot, ChatMessage, ChatThread, ContractChangeVersion, SuggestionResponse } from "../canvas/canvasTypes";
+import type { AnalysisResponse, CanvasProject, CanvasSnapshot, ChatMessage, ChatThread, ContractChangeVersion, FeatureSpec, SuggestionResponse } from "../canvas/canvasTypes";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -136,6 +136,19 @@ export async function suggestChanges(input: { projectId: string; targetNodeId?: 
   }
 
   return (await response.json()) as SuggestionResponse;
+}
+
+export async function createSpec(projectId: string, focusNodeId?: string, instruction?: string) {
+  const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/spec`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ focusNodeId: focusNodeId ?? null, instruction: instruction ?? null }),
+  });
+  if (!response.ok) {
+    throw await readError(response, "Failed to generate spec");
+  }
+
+  return (await response.json()) as FeatureSpec;
 }
 
 export async function listNodeVersions(input: { projectId: string; nodeId: string }) {

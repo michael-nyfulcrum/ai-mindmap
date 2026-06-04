@@ -34,6 +34,7 @@ import { ProjectCarousel } from "./ProjectCarousel";
 import {
   createChat,
   createProject,
+  createSpec,
   deleteChat,
   deleteProject,
   generateProject,
@@ -1135,6 +1136,63 @@ export function CanvasPage() {
     [aiBusy, focusNode, persist, project.id, screenToFlowPosition],
   );
 
+  const createSpecForNode = useCallback(
+    async (sourceNodeId: string, instruction?: string) => {
+      if (!project.id || aiBusy) {
+        return;
+      }
+      setIsSuggesting(true);
+      try {
+        // Persist first so the spec is built from the latest saved canvas.
+        await persist();
+        const spec = await createSpec(project.id, sourceNodeId, instruction);
+        const sourceNode = snapshotRef.current.nodes.find((node) => node.id === sourceNodeId);
+        const specId = createId("node");
+        const timestamp = nowIso();
+        const position = sourceNode
+          ? { x: sourceNode.position.x + 360, y: sourceNode.position.y + 60 }
+          : screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+        const specNode: CanvasFlowNode = {
+          id: specId,
+          type: "contextNode",
+          position,
+          data: {
+            canvasType: "spec",
+            title: spec.title,
+            fields: { content: spec.content },
+            tags: ["spec"],
+            updatedAt: timestamp,
+          },
+        };
+        dirtyRef.current = true;
+        setNodes((current) => current.concat(specNode));
+        if (sourceNode) {
+          const edgeId = createId("edge");
+          setEdges((current) =>
+            current.concat({
+              id: edgeId,
+              source: specId,
+              target: sourceNodeId,
+              type: "default",
+              label: "specifies",
+              data: { relationship: "specifies", updatedAt: timestamp },
+            }),
+          );
+        }
+        setActiveNodeIds([specId]);
+        setActiveEdgeIds([]);
+        setIsInspectorCollapsed(false);
+        toast.success("Spec created — hand it to your coding agent", "spec-create");
+      } catch (error) {
+        setSaveState("error");
+        toast.error("Couldn’t create the spec — try again", "spec-create", errorDetail(error));
+      } finally {
+        setIsSuggesting(false);
+      }
+    },
+    [aiBusy, persist, project.id, screenToFlowPosition, setEdges, setNodes],
+  );
+
   const applyAcceptance = useCallback(
     (changeIds: string[]) => {
       const current = proposal;
@@ -1459,9 +1517,11 @@ export function CanvasPage() {
           saveState={saveState}
           isSuggesting={isSuggesting}
           aiBusy={aiBusy}
+          projectName={project.name}
           onSaveNode={saveNodeVersion}
           onChatAboutNode={chatAboutNode}
           onRequestSuggestions={(nodeId, instruction) => void requestSuggestions(nodeId, instruction)}
+          onCreateSpec={(nodeId, instruction) => void createSpecForNode(nodeId, instruction)}
           onCollapse={() => setIsInspectorCollapsed(true)}
         />
       ) : null}
@@ -1565,6 +1625,7 @@ export function CanvasPage() {
           />
         </Suspense>
       ) : null}
+
     </main>
   );
 }
@@ -1576,6 +1637,7 @@ const MINIMAP_NODE_COLORS: Record<CanvasNodeType, string> = {
   link: "#f0a429",
   image: "#e879b9",
   note: "#b78cff",
+  spec: "#6d78ff",
 };
 
 function miniMapNodeColor(node: CanvasFlowNode) {

@@ -20,6 +20,7 @@ from context_canvas_api.demo import utc_now
 from context_canvas_api.env import ai_configuration_status, load_project_dotenv
 from context_canvas_api.models import CanvasSnapshot
 from context_canvas_api.source_fetcher import fetch_source, infer_source_type, search_source_context
+from context_canvas_api.spec_kit import build_feature_spec
 
 load_project_dotenv()
 
@@ -62,6 +63,18 @@ class SuggestRequest(BaseModel):
             return None
         normalized = value.strip()
         return normalized or None
+
+
+class SpecRequest(BaseModel):
+    focusNodeId: str | None = Field(default=None, max_length=128)
+    instruction: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("focusNodeId", "instruction")
+    @classmethod
+    def blank_to_none(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return value.strip() or None
 
 
 class AnalyzeRequest(BaseModel):
@@ -311,6 +324,17 @@ def create_app(
             raise HTTPException(status_code=502, detail=str(exc)) from exc
         db.save_analysis_run(project_id, payload.question, analysis)
         return analysis.model_dump()
+
+    @app.post("/api/projects/{project_id}/spec")
+    def create_spec(project_id: str, payload: SpecRequest, db: AppDatabase = Depends(_db)) -> dict[str, Any]:
+        snapshot = db.get_snapshot(project_id)
+        if not snapshot:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return build_feature_spec(
+            snapshot.model_dump(),
+            focus_node_id=payload.focusNodeId,
+            instruction=payload.instruction,
+        )
 
     @app.post("/api/projects/{project_id}/suggest")
     def suggest(project_id: str, payload: SuggestRequest, db: AppDatabase = Depends(_db)) -> dict[str, Any]:

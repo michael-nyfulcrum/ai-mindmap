@@ -42,6 +42,7 @@ Requirement nodes created or updated through MCP receive audit metadata and cont
 - `upsert_requirement_node`
 - `upsert_source_snapshot_node`
 - `summarize_canvas_nodes`
+- `get_canvas_spec`
 
 `get_canvas_context` returns:
 
@@ -52,6 +53,8 @@ Requirement nodes created or updated through MCP receive audit metadata and cont
 - Recent contract and requirement version summaries.
 - Canvas relationships.
 - Markdown formatted for agent prompts.
+
+`get_canvas_spec` returns a GitHub Spec Kit feature spec saved as a `spec` node on the canvas, plus an instruction to implement it. Specs are authored from the canvas with the "Create spec" AI action, which uses OpenAI to turn the saved canvas text into concrete acceptance criteria (falling back to a deterministic mapping when AI is unavailable). The spec body lists functional requirements as `FR-###` with acceptance criteria, each traceable back to its canvas node ID, and only raises `[NEEDS CLARIFICATION]` for genuine gaps. A coding agent calls `get_canvas_spec` with the project ID and spec node ID, then builds exactly what the spec describes.
 
 ## Resources
 

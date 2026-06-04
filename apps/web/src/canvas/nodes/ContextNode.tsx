@@ -2,7 +2,7 @@ import { memo } from "react";
 import { Handle, NodeToolbar, Position, useReactFlow, type NodeProps } from "@xyflow/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { AlertCircle, CheckCircle2, Crosshair, FileText, Image, Link2, Lock, LockOpen, ScrollText, Trash2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Crosshair, FileCode2, FileText, Image, Link2, Lock, LockOpen, ScrollText, Trash2 } from "lucide-react";
 import type { CanvasFlowNode, CanvasNodeType, ImpactStatus } from "../canvasTypes";
 import { NODE_TYPE_LABELS } from "../canvasTypes";
 
@@ -13,6 +13,7 @@ const nodeIcons: Record<CanvasNodeType, typeof FileText> = {
   image: Image,
   link: Link2,
   source_snapshot: AlertCircle,
+  spec: FileCode2,
 };
 
 const NOTE_ACCENTS = ["#f0a429", "#3fc46b", "#4a9eff", "#e879b9", "#b78cff"];

@@ -6,7 +6,8 @@ export type CanvasNodeType =
   | "requirement"
   | "image"
   | "link"
-  | "source_snapshot";
+  | "source_snapshot"
+  | "spec";
 
 export type SourceType = "confluence" | "jira" | "figma" | "github" | "generic";
 
@@ -130,6 +131,14 @@ export type ContractChangeVersion = {
   createdAt: string;
 };
 
+export type FeatureSpec = {
+  title: string;
+  slug: string;
+  content: string;
+  requirementCount: number;
+  openQuestionCount: number;
+};
+
 export type ChatThread = {
   id: string;
   projectId: string;
@@ -154,6 +163,7 @@ export const NODE_TYPE_LABELS: Record<CanvasNodeType, string> = {
   image: "Image",
   link: "Link",
   source_snapshot: "Source Snapshot",
+  spec: "Spec",
 };
 
 export const EDGE_RELATIONSHIPS = [
@@ -164,6 +174,7 @@ export const EDGE_RELATIONSHIPS = [
   "design reference",
   "requirement source",
   "test coverage",
+  "specifies",
 ] as const;
 
 export function defaultFieldsForType(): Record<string, string> {

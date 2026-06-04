@@ -1,102 +1,407 @@
 # ai-mindmap Demo
 
-## Description
+Context Canvas is the single source of truth that closes the gap between
+business intent, engineering execution, and AI-assisted development. Teams map
+contracts, requirements, source references, decisions, and specs onto one living
+canvas that PMs can maintain, developers can trust, and coding agents can read
+through MCP.
 
-ai-mindmap is the single source of truth that finally closes the gap between business intent and engineering execution. Teams map their entire project — contracts, requirements, decisions, and source references — onto a living, collaborative canvas that both humans and AI agents read from in real time. Every change is tracked, every decision is logged, and when requirements evolve the platform automatically surfaces exactly which parts of the project are impacted, so nothing slips through the cracks and no one is working off stale context. Business and tech stay locked in through a shared visual layer that replaces scattered docs, lost Slack threads, and tribal knowledge — and the built-in MCP server plugs directly into any AI coding assistant, giving developers autonomous, context-aware AI that actually understands the project rather than guessing from the codebase. The result is tighter alignment, faster iteration, and a team that ships with confidence because everyone — human and AI — is always working from the same ground truth.
+The sales story is simple: most AI productivity tooling starts at the codebase.
+Context Canvas starts earlier, where the intent is born. It turns requirements
+into structured execution context, then turns that context into spec-driven
+delivery.
+
+## Five-Minute Pitch
+
+Use these as Google Slides copy. Keep the visible slide text minimal and put the
+talk track in speaker notes.
+
+### Slide 1: Intro
+
+Visible slide:
+
+```text
+Context Canvas
+One truth for PMs, developers, and AI
+```
+
+Speaker notes:
+
+Every software team has the same expensive problem: product intent lives in one
+place, developer execution lives somewhere else, and AI tools are forced to
+guess from whatever context we paste into them. Context Canvas closes that gap.
+It turns contracts, requirements, decisions, sources, and specs into one living
+project map that PMs can maintain, developers can trust, and AI agents can read
+directly.
+
+### Slide 2: The Problem
+
+Visible slide:
+
+```text
+AI is only as good as its context
+```
+
+Speaker notes:
+
+AI coding is not blocked by model capability anymore. It is blocked by context
+quality. If the source of truth is scattered across Jira, docs, Slack, Figma,
+old tickets, and tribal memory, the agent starts from stale assumptions. For
+senior developers and CTOs, that means rework, review risk, brittle handoffs,
+and no reliable trace from business change to engineering change.
+
+### Slide 3: The Product
+
+Visible slide:
+
+```text
+A living requirements graph
+for humans and agents
+```
+
+Speaker notes:
+
+Context Canvas is not another project board. It is a connected graph of
+contracts, requirements, source snapshots, notes, links, images, decisions, and
+now implementation specs. The relationships are the differentiator. When a
+requirement changes, the system understands what depends on it. That gives the
+team a smaller, smarter review surface and gives AI agents structured context
+instead of loose prompt soup.
+
+### Slide 4: What It Does
+
+Visible slide:
+
+```text
+Map
+Track
+Analyze
+Spec
+Handoff
+```
+
+Speaker notes:
+
+First, we map the project visually. Second, every meaningful requirement and
+contract edit is versioned. Third, AI impact analysis flags only the nodes that
+are genuinely affected. Fourth, the new spec-driven design flow turns a canvas
+node into a GitHub Spec Kit-style feature spec with functional requirements,
+acceptance criteria, development requirements, and traceability back to the
+canvas. Fifth, MCP hands that spec to the coding agent as the implementation
+contract.
+
+### Slide 5: Demo Flow
+
+Visible slide:
+
+```text
+Canvas to spec
+Spec to code
+Change to update
+```
+
+Speaker notes:
+
+I will keep the demo tight. We create a project from a template, inspect the
+connected project map, generate a spec from one requirement, and hand that spec
+to a coding agent through MCP. Then we change the contract, show targeted impact
+badges, regenerate or resync the spec, and ask the agent to update only what
+changed. The wow moment is that the canvas stays the source of truth from
+product intent to executable delivery.
+
+### Slide 6: Why This Wins
+
+Visible slide:
+
+```text
+Less guessing
+Less rework
+More throughput
+No platform lock-in
+```
+
+Speaker notes:
+
+This wins because it solves the real enterprise AI problem: trusted context.
+PMs get a visual product brain. Developers get traceable, testable requirements.
+CTOs get a repeatable spec-driven delivery layer that boosts productivity
+without turning the stack into a vendor science project. AI agents get current
+context through MCP, not screenshots, stale docs, or vibes. It is portable,
+auditable, and built on boring infrastructure: React, FastAPI, FastMCP, SQLite,
+Docker Compose, and Caddy.
+
+### Slide 7: Close
+
+Visible slide:
+
+```text
+Context becomes execution
+```
+
+Speaker notes:
+
+The future is not just AI writing more code. The future is AI executing the
+right spec from the right context. Context Canvas turns project knowledge into
+an execution layer. It keeps humans and AI aligned on the same live truth, then
+pushes that truth forward into spec-driven design, implementation, and change
+management.
 
 ## Demo Positioning
 
-This demo is intentionally portable. The stack is made from boring,
-open-source building blocks: Vite/React, FastAPI, FastMCP, SQLite, Docker
-Compose, and Caddy. It can run on a laptop, a cheap VPS, an EC2 instance, a
-DigitalOcean droplet, or any server that can run Docker. There is no required
-Vercel account, no Supabase project, no managed database contract, and no
-product-specific deployment workflow to learn before the demo works.
+The demo should feel like the future of product delivery: a lightweight command
+center where product intent becomes structured engineering output, then becomes
+AI-executable implementation context.
 
-That matters in a sales demo. A hosted-platform demo can look simple until it
-depends on vendor dashboards, usage limits, pricing tiers, environment-specific
-secrets, and platform support knowledge. Context Canvas keeps the operational
-story direct: copy the repo or release package, set `.env`, run the Makefile
-checks, and bring up the same containers everywhere. If a customer wants the
-demo on their own infrastructure, the answer is "yes" without a migration plan
-or a new cloud bill.
+Use these framing points:
 
-Use this when comparing against demos built around Supabase, Vercel, or similar
-platform-specific stacks:
+- Context Canvas is the project brain: contracts, requirements, decisions,
+  source evidence, and specs stay connected.
+- Spec-driven design is the accelerator: the canvas generates implementation
+  specs with `FR-###` functional requirements, acceptance criteria, development
+  requirements, and traceability to canvas node IDs.
+- MCP is the execution bridge: coding agents can fetch current context and specs
+  directly instead of relying on copy-pasted prompts.
+- Impact analysis is the governance layer: when intent changes, only genuinely
+  affected nodes are flagged for review.
+- The deployment is portable: the demo runs with Vite/React, FastAPI, FastMCP,
+  SQLite, Docker Compose, and Caddy.
 
-- No vendor lock-in: the app, API, MCP server, reverse proxy, SQLite database,
-  and uploads run together under Docker Compose.
-- No required paid platform account: the live demo needs a server, DNS, and an
-  OpenAI API key for AI features, not a bundle of hosting products.
-- No platform-specific ops knowledge: standard Linux, Docker, Caddy, and
-  Makefile commands are enough to deploy, inspect logs, back up data, and
-  restart the service.
-- Easy customer handoff: the same package can be moved from a laptop to a
-  server without rewriting the architecture around a vendor's deployment model.
+The competitive angle should be confident but defensible. This is not glued to
+Vercel, Supabase, or a proprietary platform workflow. A normal Linux server,
+Docker, DNS, and an OpenAI API key are enough for the live AI demo. Customers can
+run it on their own infrastructure without buying into a managed-hosting maze.
 
-## Live Demo Script
+## Live Demo Story
 
-Use this flow when presenting the hosted demo. The goal is to show that Context
-Canvas is both the project workspace and the context source that AI agents can
-trust.
+The story: a PM captures intent on the canvas, the canvas turns that intent into
+a spec, a coding agent implements from the spec through MCP, then a stakeholder
+changes scope and the system narrows the update path.
 
-1. Open the live demo and create a project from a template.
-   - Say: "The demo starts clean, then we create a realistic project from a
-     template so the audience can see the setup path."
-   - Choose a template from the project picker and open the generated canvas.
+Recommended timebox:
 
-2. Inspect the generated project map.
-   - Say: "This is the shared project map. It keeps contracts, requirements,
-     sources, and decisions connected instead of scattering them across docs and
-     chat threads."
-   - Point out the contract, requirement, source, note, link, and image nodes.
+- Slides: 60-75 seconds.
+- Canvas project creation and inspection: 45 seconds.
+- Spec generation and agent handoff: 75-90 seconds.
+- Requirement change and impact badges: 45-60 seconds.
+- Agent update / close: 60-90 seconds.
 
-3. Create or inspect a requirement node.
-   - Show that requirements are first-class project objects, not just text in a
-     document.
-   - Open the inspector and highlight the title, content, source metadata, and
-     relationships.
+## Current Live URLs
 
-4. Connect the requirement to a source or contract.
-   - Say: "The edge matters because this tells the system what depends on what.
-     When a requirement changes, the canvas knows where to look for downstream
-     impact."
+- App: `https://7865420.xyz`
+- API: `https://7865420.xyz/api`
+- MCP: `https://7865420.xyz/mcp`
 
-5. Edit a requirement or contract.
-   - Make a small but meaningful wording change, such as changing acceptance
-     criteria or scope.
-   - Save the change and show the version history or before/after diff.
+## Before The Demo
 
-6. Show impact analysis and badges.
-   - Point out that only affected nodes are flagged.
-   - Say: "This is the difference between a smart project map and a pile of
-     documents. The system narrows the review surface instead of asking the team
-     to reread everything."
+Reset the live data to an empty project list on the live server, or through a
+Docker context that points at it:
 
-7. Use AI chat against the canvas.
-   - Ask a question like: "Which requirements are affected by the latest
-     contract change?"
-   - Highlight that answers cite saved canvas context rather than guessing from
-     loose prompt text.
+```sh
+make demo-reset
+```
 
-8. Open the Developer Handoff panel.
-   - Show the MCP endpoint and setup instructions.
-   - Say: "The same context a product person sees here is what an AI coding
-     agent can read through MCP. The agent starts from the current project truth,
-     not from stale assumptions in the codebase."
+This backs up current data to `dist/backups/`, wipes the SQLite DB and uploads,
+restarts the stack, and verifies `/api/projects` is empty. To skip the
+confirmation prompt during a rehearsed run:
 
-9. Close with the deployment point.
-   - Say: "This is not glued to a proprietary hosting workflow. The demo runs as
-     standard Docker services with Caddy, SQLite, and a normal Linux server."
+```sh
+FORCE=1 make demo-reset
+```
+
+Confirm the app loads clean at `https://7865420.xyz`. The project picker should
+show no saved projects.
+
+Wire the coding agent to the MCP server in the scratch directory where the demo
+app will be generated:
+
+```sh
+mkdir -p ~/demo-app && cd ~/demo-app
+claude mcp add --transport http context-canvas https://7865420.xyz/mcp
+```
+
+Verify the tools are visible in the coding agent. The important ones for the
+demo are `list_canvas_projects`, `get_canvas_context`, and `get_canvas_spec`.
+
+## Demo Script
+
+### 1. Create A Project
+
+In the app, create a project from a template. Recommended: **Sales E-commerce
+App**. One click populates the canvas with a contract, source snapshots, and
+requirement nodes connected by `implements` edges.
+
+Talk track:
+
+> This is the shared project map: the contract, the requirements, and the
+> sources that back them, all connected. This is what both the team and the AI
+> agent read from. We are not starting from a blank prompt; we are starting from
+> structured product truth.
+
+### 2. Inspect The Requirement Graph
+
+Open the contract and one requirement node. Point out:
+
+- Requirement text.
+- Source relationships.
+- Version history.
+- AI actions.
+- The new **Create spec** action.
+
+Talk track:
+
+> Requirements are first-class product assets here. They are not buried in a
+> meeting note or converted into a ticket that loses half the context. The graph
+> keeps the business source, requirement, and delivery path connected.
+
+### 3. Generate A Spec
+
+Select a focused requirement such as **Cart And Checkout** and click **Create
+spec**. Optionally steer the spec with a short instruction:
+
+```text
+Make this implementation-ready for an AI coding agent. Emphasize checkout
+behavior, validation, and testable acceptance criteria.
+```
+
+Open the generated spec node and show that it contains a structured GitHub Spec
+Kit-style spec: overview, functional requirements, acceptance criteria,
+development requirements, source IDs, and open questions only when needed.
+
+Talk track:
+
+> This is the spec-driven design moment. We are moving from conversational AI to
+> executable product architecture. The PM still works visually, the developer
+> gets a precise implementation contract, and the AI agent gets functional
+> requirements with acceptance criteria instead of a vague task.
+
+### 4. Hand The Spec To The Coding Agent
+
+Copy the spec handoff prompt from the spec node, or paste this version:
+
+```text
+Use the context-canvas MCP server as the source of truth.
+
+1. Call list_canvas_projects and pick the most recently updated project.
+2. Call get_canvas_spec for the latest spec node.
+3. Build a single self-contained index.html with inline CSS and vanilla JS that
+   implements exactly the functional requirements in the spec.
+4. Cite each FR-### and canvas node ID in an HTML comment above the section that
+   implements it.
+
+Do not invent scope. If the spec marks anything [NEEDS CLARIFICATION], ask
+before implementing it. After writing the file, list which FRs you implemented
+and where.
+```
+
+Open the generated `index.html` in a browser and walk through the feature.
+
+Talk track:
+
+> The agent did not need a product manager to rewrite the requirement into a
+> perfect prompt. It pulled the live spec over MCP and built against the same
+> source of truth the team sees. This is how we turn AI from a clever autocomplete
+> into a delivery accelerator.
+
+### 5. Change The Contract
+
+Back in the canvas, make a meaningful scope change. Recommended for the Sales
+E-commerce template:
+
+- Open the **Sales E-commerce App Contract** node.
+- Bring previously excluded work into scope by changing the out-of-scope line so
+  **discount codes / coupons at checkout** are now in scope for the first
+  release.
+- Save.
+
+On save, impact analysis runs and connected requirement nodes, such as **Cart
+And Checkout**, receive "Needs update" / "Outdated" badges.
+
+Talk track:
+
+> This is where the graph pays off. We changed the contract, but the system did
+> not panic and flag the whole project. It narrowed the blast radius to the
+> requirements that actually depend on the change. That is product governance,
+> developer focus, and AI context hygiene in one workflow.
+
+Alternative quick edit: update **Cart And Checkout** directly to add:
+
+```text
+Customers can apply a discount code before payment, and the order summary shows
+the discounted total before checkout is confirmed.
+```
+
+### 6. Regenerate Or Resync The Spec
+
+Select the impacted requirement and use **Create spec** again, or open the
+existing spec and explain that the coding agent can re-sync current canvas
+context and active impact flags.
+
+Paste this into the coding agent:
+
+```text
+The canvas changed. Re-sync from the context-canvas MCP server and update the
+app.
+
+1. Call get_canvas_context with task "apply the latest checkout requirement
+   changes". Read the active impact flags and recent change summary.
+2. Call get_canvas_spec for the latest relevant spec if one exists.
+3. Update index.html so it matches the changed requirement and spec.
+4. Tell me exactly what changed and which canvas node, impact flag, or FR drove
+   the change.
+
+Only change what the updated canvas requires. Do not redo unaffected sections.
+```
+
+Reload `index.html` to show the new behavior, such as a discount-code field at
+checkout.
+
+Talk track:
+
+> Same agent, no new hand-written spec from me. It read the changed context, the
+> impact flags, and the implementation spec over MCP, then made the targeted
+> update. The canvas stayed the single source of truth from idea to spec to code
+> to change.
+
+### 7. Optional Write-Back Moment
+
+If there is time, show that MCP can write back to the canvas:
+
+```text
+Using the context-canvas MCP server, call upsert_requirement_node on the same
+project to add a requirement titled "Discount Codes" describing the discount
+code behavior we just implemented, tagged ["checkout", "payments"]. Then confirm
+it by calling get_canvas_context.
+```
+
+Refresh the canvas to show the agent-authored requirement node, with
+`context_canvas_mcp` recorded as the actor in its history.
+
+Talk track:
+
+> This is a closed-loop delivery system. Humans shape intent, AI accelerates
+> execution, and the project brain keeps the trace.
 
 ## Objection Handling
 
-Use these answers to keep the demo credible and direct.
+- Is this just another project board?
+  No. The differentiator is the connected context graph plus spec generation and
+  MCP access. Humans update the same project map that coding agents use as
+  structured, current context.
+
+- Why is spec-driven design important?
+  It turns fuzzy requirements into an implementation-ready contract. The spec
+  gives developers and AI agents concrete `FR-###` requirements, acceptance
+  criteria, dependency hints, and traceability back to the canvas.
+
+- Does this replace senior developers?
+  No. It gives senior developers a better control plane. They still review
+  architecture, edge cases, and implementation quality, but the repetitive
+  translation from product prose to buildable tasks is accelerated.
 
 - Do we need Supabase?
   No. The demo stores SQLite data and uploads in a Docker volume. Supabase could
-  be integrated later if a customer wants managed Postgres/auth, but it is not
-  required for this demo to run.
+  be integrated later if a customer wants managed Postgres or auth, but it is
+  not required for this demo to run.
 
 - Do we need Vercel?
   No. Caddy serves the built Vite frontend and reverse-proxies `/api`, `/health`,
@@ -104,8 +409,8 @@ Use these answers to keep the demo credible and direct.
 
 - Can this run on our own infrastructure?
   Yes. The intended handoff is a repo checkout or release package plus `.env`,
-  Docker Compose, and Makefile commands. It can run on a laptop, a private VPS,
-  or a customer-controlled Linux host.
+  Docker Compose, and Makefile commands. It can run on a laptop, private VPS, or
+  customer-controlled Linux host.
 
 - What paid dependency exists?
   AI features require an OpenAI API key. The hosting stack itself does not
@@ -113,13 +418,8 @@ Use these answers to keep the demo credible and direct.
 
 - Is SQLite enough?
   For a focused demo and simple single-server deployment, yes. The important
-  architectural point is that the app owns its persistence behind the API and MCP
-  layers, so the demo is not designed around a specific database vendor.
-
-- Is this just another project board?
-  No. The differentiator is the connected context graph plus MCP access. Humans
-  update the same project map that coding agents use as structured, current
-  context.
+  architectural point is that the app owns its persistence behind the API and
+  MCP layers, so the demo is not designed around a specific database vendor.
 
 - Is auth included?
   Not in the current demo. The live demo is intentionally open and no-login so
@@ -134,7 +434,8 @@ demo stronger.
 - SQLite is the current persistence layer for the portable demo stack.
 - Uploads are stored with the app data volume and should be backed up with
   `make live-backup-data`.
-- AI chat and AI impact analysis require a configured `OPENAI_API_KEY`.
+- AI chat, AI impact analysis, and AI spec generation require a configured
+  `OPENAI_API_KEY`. Spec generation has a deterministic fallback for tests.
 - Jira, Confluence, Slack, Figma, and GitHub workflows are not the core demo
   gate; some source metadata is present, but deep integrations are deferred or
   experimental.
@@ -142,16 +443,31 @@ demo stronger.
 - The live demo should be treated as a focused product proof, not a hardened
   multi-tenant SaaS deployment.
 
-## Demo Flow
+## After The Demo
 
-### 1. User Creates a Project
+Reset again so the next session starts clean:
 
-The user opens Context Canvas and creates a new project from a template or from scratch. They add nodes to the canvas: a project contract, requirement nodes, and source references (e.g. a Jira ticket, a Confluence page, a Figma link). They connect these nodes with labeled edges to express relationships — a requirement that "depends on" a source, or a spec that "implements" a contract. The canvas saves automatically after every change.
+```sh
+make demo-reset
+```
 
-### 2. User Uses MCP While Coding
+Backups from each reset are in `dist/backups/` if you need to recover a session.
 
-The user opens their AI coding assistant (e.g. Claude Code) and connects it to the Context Canvas MCP server using the endpoint shown in the canvas's Agent Handoff panel. The agent calls `get_canvas_context()` and receives the full project context — requirements, source nodes, relationships, and any active impact flags — formatted as structured Markdown. The agent uses this to answer questions, write code aligned to actual requirements, and cite specific nodes, all grounded in what the canvas says rather than what the codebase implies.
+## Optional Variant: AI Seeds The Canvas
 
-### 3. User Changes Requirements on the Canvas; Select Nodes Flag as Needing Update
+If you would rather have the agent populate the canvas instead of using a
+template, create an empty project in the app first, note its name, then paste:
 
-The user returns to the canvas and edits the project contract or a requirement — changing scope, updating acceptance criteria, or revising wording. On save, the system detects the semantic change, identifies connected nodes that may be affected, and runs an AI-powered impact analysis. Only the nodes that are genuinely downstream of the change are flagged — not every node on the canvas. Each flagged node receives a visible badge ("Needs update", "Outdated", or "Conflict") directly on the canvas. The next time the coding agent calls `get_canvas_context()`, it receives the flagged nodes alongside a plain-English change summary and can factor them into its next task — prompting targeted, context-aware updates rather than a full re-review.
+```text
+Use the context-canvas MCP server. Call list_canvas_projects and find the
+project named "<your empty project name>". For that project, call
+upsert_source_snapshot_node once to add a short client brief, then call
+upsert_requirement_node 3-4 times to add the core requirements for a small
+<your app idea> app. Keep each requirement one short paragraph. Then call
+get_canvas_context and summarize what you created.
+```
+
+MCP can create requirement and source-snapshot nodes, but not the project itself
+or the `project_contract` node. Create the project in the app first, refresh the
+canvas to show the agent-authored nodes, then continue with the spec-driven demo
+flow.

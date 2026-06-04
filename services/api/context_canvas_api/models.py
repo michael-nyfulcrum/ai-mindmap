@@ -12,6 +12,7 @@ CanvasNodeType = Literal[
     "image",
     "link",
     "source_snapshot",
+    "spec",
 ]
 
 

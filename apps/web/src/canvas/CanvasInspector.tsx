@@ -1,5 +1,5 @@
-import { memo, useEffect, useMemo, useState } from "react";
-import { History, Maximize2, MessagesSquare, PanelRightClose, Save, Sparkles, Undo2, WandSparkles } from "lucide-react";
+import { memo, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Clipboard, FileCode2, History, Maximize2, MessagesSquare, PanelRightClose, Save, Sparkles, Undo2, WandSparkles } from "lucide-react";
 import { listNodeVersions } from "../api/canvasApi";
 import type { CanvasFlowNode, CanvasNodeData, ContractChangeVersion, ImpactStatus } from "./canvasTypes";
 import { NODE_TYPE_LABELS } from "./canvasTypes";
@@ -9,17 +9,25 @@ import { Spinner } from "../shared/ui/Spinner";
 import { ContentEditorModal } from "./ContentEditorModal";
 import { DiffStat, DiffView } from "./DiffView";
 import { RichContentEditor } from "./RichContentEditor";
+import { copyText } from "../shared/clipboard";
+import { toast } from "../shared/toast";
+
+// Expands a thin requirement into everything a full spec needs.
+const FLESH_OUT_INSTRUCTION =
+  "Flesh out this requirement so it is complete enough for a full specification: rewrite it with clear functional behavior and 3-5 testable acceptance criteria, and propose any missing related requirements, edge cases, and dependencies needed to build it.";
 
 // Quick-fill prompts that customise what the AI suggests for the selected node.
-const SUGGEST_PRESETS = [
-  "Add acceptance criteria",
-  "Break into subtasks",
-  "Surface risks & edge cases",
-  "Suggest related requirements",
+// Each chip sets the instruction sent with the Improve action.
+const SUGGEST_PRESETS: { label: string; instruction: string }[] = [
+  { label: "Flesh out for a full spec", instruction: FLESH_OUT_INSTRUCTION },
+  { label: "Add acceptance criteria", instruction: "Add acceptance criteria" },
+  { label: "Surface risks & edge cases", instruction: "Surface risks & edge cases" },
+  { label: "Suggest related requirements", instruction: "Suggest related requirements" },
 ];
 
 type CanvasInspectorProps = {
   projectId: string;
+  projectName: string;
   activeNode: CanvasFlowNode;
   saveState: "loading" | "saved" | "saving" | "error";
   isSuggesting: boolean;
@@ -27,11 +35,13 @@ type CanvasInspectorProps = {
   onSaveNode: (nodeId: string, data: CanvasNodeData, commitMessage: string) => Promise<void>;
   onChatAboutNode: (node: CanvasFlowNode, instruction?: string) => void;
   onRequestSuggestions: (nodeId: string, instruction?: string) => void;
+  onCreateSpec: (nodeId: string, instruction?: string) => void;
   onCollapse: () => void;
 };
 
 export const CanvasInspector = memo(function CanvasInspector({
   projectId,
+  projectName,
   activeNode,
   saveState,
   isSuggesting,
@@ -39,6 +49,7 @@ export const CanvasInspector = memo(function CanvasInspector({
   onSaveNode,
   onChatAboutNode,
   onRequestSuggestions,
+  onCreateSpec,
   onCollapse,
 }: CanvasInspectorProps) {
   const [versionResult, setVersionResult] = useState<{
@@ -60,13 +71,15 @@ export const CanvasInspector = memo(function CanvasInspector({
   const audit = activeNode.data.audit;
   const impact = activeNode.data.impact;
   const savedContent = activeNode.data.fields.content ?? "";
-  // What the "Suggest a fix" action asks for: the user's own words, or — for a
+  // What the Improve action asks for: the user's own words, or — for a
   // flagged node left blank — a fix grounded in why it was flagged.
   const suggestInstruction =
     suggestPrompt.trim() ||
     (impact
       ? `Suggest a concrete content update for "${activeNode.data.title}". It is flagged ${impact.status}: ${impact.reason}`
       : undefined);
+  const isSpecNode = activeNode.data.canvasType === "spec";
+  const handoffPrompt = buildSpecHandoffPrompt(projectId, projectName, activeNode);
   const isVersionedNode = ["project_contract", "requirement"].includes(activeNode.data.canvasType);
   const versions = isVersionedNode && versionResult.nodeId === activeNode.id ? versionResult.versions : [];
   const versionState = !isVersionedNode
@@ -174,63 +187,97 @@ export const CanvasInspector = memo(function CanvasInspector({
           </section>
         ) : null}
 
-        <section className="inspector-section inspector-ai-actions">
-          <div className="inspector-section-head">
-            <h3>
-              <Sparkles size={13} /> AI actions
-            </h3>
-          </div>
-
-          <input
-            className="inspector-inline-input ai-action-input"
-            value={suggestPrompt}
-            placeholder={impact ? "What's on your mind? (or leave blank to fix the flag)" : "What's on your mind? (optional)"}
-            aria-label="AI instruction"
-            disabled={aiBusy}
-            onChange={(event) => setSuggestPrompt(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                onRequestSuggestions(activeNode.id, suggestInstruction);
-              }
-            }}
-          />
-
-          <div className="ai-action-chips">
-            {SUGGEST_PRESETS.map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                className="ai-action-chip"
-                disabled={aiBusy}
-                onClick={() => setSuggestPrompt(preset)}
-              >
-                {preset}
-              </button>
-            ))}
-          </div>
-
-          <div className="ai-action-row">
+        {isSpecNode ? (
+          <section className="inspector-section spec-handoff">
+            <div className="inspector-section-head">
+              <h3>
+                <FileCode2 size={13} /> Coding agent handoff
+              </h3>
+            </div>
+            <p className="spec-handoff-hint">
+              Paste this into your coding agent (Claude Code, Codex, Cursor). It pulls this spec over
+              MCP and builds the feature.
+            </p>
+            <textarea className="spec-handoff-prompt" value={handoffPrompt} readOnly rows={9} spellCheck={false} />
             <Button
-              icon={<MessagesSquare size={14} />}
-              variant="ghost"
-              disabled={aiBusy}
-              onClick={() => onChatAboutNode(activeNode, suggestPrompt.trim() || undefined)}
-              title="Open a chat about this node"
-            >
-              Talk it through
-            </Button>
-            <Button
-              icon={isSuggesting ? <Spinner size={14} /> : <WandSparkles size={15} />}
+              icon={<Clipboard size={15} />}
               variant="primary"
-              disabled={aiBusy}
-              onClick={() => onRequestSuggestions(activeNode.id, suggestInstruction)}
-              title="Preview AI edits for this node"
+              onClick={() => {
+                void copyText(handoffPrompt).then((ok) =>
+                  ok
+                    ? toast.success("Handoff prompt copied", "spec-handoff")
+                    : toast.error("Couldn’t copy to clipboard", "spec-handoff", "Select the text and copy manually."),
+                );
+              }}
             >
-              {isSuggesting ? "Conjuring…" : "Suggest a fix"}
+              Copy prompt
             </Button>
-          </div>
-        </section>
+          </section>
+        ) : (
+          <section className="inspector-section inspector-ai-actions">
+            <div className="inspector-section-head">
+              <h3>
+                <Sparkles size={13} /> AI actions
+              </h3>
+            </div>
+
+            <input
+              className="inspector-inline-input ai-action-input"
+              value={suggestPrompt}
+              placeholder={impact ? "What's on your mind? (or leave blank to fix the flag)" : "What's on your mind? (optional)"}
+              aria-label="AI instruction"
+              disabled={aiBusy}
+              onChange={(event) => setSuggestPrompt(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  onRequestSuggestions(activeNode.id, suggestInstruction);
+                }
+              }}
+            />
+
+            <div className="ai-action-chips">
+              {SUGGEST_PRESETS.map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  className="ai-action-chip"
+                  disabled={aiBusy}
+                  onClick={() => setSuggestPrompt(preset.instruction)}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
+            <p className="ai-action-hint">Your note above steers each action.</p>
+
+            <div className="ai-action-list">
+              <AiActionButton
+                icon={<MessagesSquare size={16} />}
+                label="Talk it through"
+                description="Open a focused chat thread about this node."
+                disabled={aiBusy}
+                onClick={() => onChatAboutNode(activeNode, suggestPrompt.trim() || undefined)}
+              />
+              <AiActionButton
+                primary
+                icon={isSuggesting ? <Spinner size={16} /> : <WandSparkles size={16} />}
+                label={isSuggesting ? "Improving…" : "Improve"}
+                description="Flesh out criteria, fill gaps & refine — preview edits, then accept."
+                disabled={aiBusy}
+                onClick={() => onRequestSuggestions(activeNode.id, suggestInstruction)}
+              />
+              <AiActionButton
+                icon={<FileCode2 size={16} />}
+                label="Create spec"
+                description="Generate a Spec Kit spec node to hand to a coding agent."
+                disabled={aiBusy}
+                onClick={() => onCreateSpec(activeNode.id, suggestPrompt.trim() || undefined)}
+              />
+            </div>
+          </section>
+        )}
 
         <div className="inspector-field">
           <span className="inspector-field-label">Tags</span>
@@ -392,6 +439,53 @@ export const CanvasInspector = memo(function CanvasInspector({
     </Panel>
   );
 });
+
+function AiActionButton({
+  icon,
+  label,
+  description,
+  disabled,
+  primary = false,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  description: string;
+  disabled?: boolean;
+  primary?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={primary ? "ai-action-item ai-action-item--primary" : "ai-action-item"}
+      disabled={disabled}
+      onClick={onClick}
+      title={description}
+    >
+      <span className="ai-action-item-icon">{icon}</span>
+      <span className="ai-action-item-text">
+        <span className="ai-action-item-label">{label}</span>
+        <span className="ai-action-item-desc">{description}</span>
+      </span>
+    </button>
+  );
+}
+
+function buildSpecHandoffPrompt(projectId: string, projectName: string, node: CanvasFlowNode) {
+  return [
+    `Implement the "${node.data.title}" spec for the "${projectName}" project.`,
+    "",
+    "Connect to the AI Mindmap MCP server, then call get_canvas_spec with:",
+    `  project_id: ${projectId}`,
+    `  spec_id: ${node.id}`,
+    "",
+    "Treat the returned spec as the single source of truth. Build exactly the functional",
+    "requirements (FR-###) it lists, cite each one back to its canvas node ID, and do not add",
+    "scope that the spec does not call for. If anything is marked [NEEDS CLARIFICATION], ask",
+    "before implementing it.",
+  ].join("\n");
+}
 
 function ImpactBadge({ status }: { status: ImpactStatus }) {
   return <em className={`impact-badge impact-badge-${status}`}>{impactLabel(status)}</em>;

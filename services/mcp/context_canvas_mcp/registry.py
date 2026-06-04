@@ -236,6 +236,44 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
             summary=f"{requirement_count} requirements are backed by {source_count} source-oriented nodes.",
         )
 
+    @app.tool(
+        name="get_canvas_spec",
+        tags=CORE_TAGS | {"canvas", "spec", "database"},
+        description=(
+            "Fetch a GitHub Spec Kit feature spec saved on a Mindmap project and the "
+            "instruction to implement it. Call this when asked to implement a spec; treat "
+            "the returned Markdown as the source of truth and build exactly what it describes."
+        ),
+        annotations={"readOnlyHint": True, "idempotentHint": True, "openWorldHint": False},
+    )
+    def get_canvas_spec(
+        project_id: str = Field(description="Project ID from list_canvas_projects.", min_length=1, max_length=128),
+        spec_id: str | None = Field(default=None, description="Spec node ID to fetch. Omit to use the most recently created spec on the project."),
+    ):
+        snapshot = canvas_store().get_snapshot(project_id)
+        if not snapshot:
+            return _tool_json({"status": "not_found", "message": "No matching Mindmap project was found."})
+        specs = [node for node in snapshot.get("nodes", []) if _node_field(node, "canvasType") == "spec"]
+        if not specs:
+            return _tool_json({"status": "no_spec", "message": "This project has no spec nodes yet. Create one from the canvas first."})
+        spec = next((node for node in specs if str(node.get("id")) == spec_id), None) if spec_id else specs[-1]
+        if spec is None:
+            return _tool_json({"status": "not_found", "message": f"No spec node '{spec_id}' was found on this project."})
+        project_name = str((snapshot.get("project") or {}).get("name") or "this project")
+        title = _node_field(spec, "title") or "Untitled spec"
+        return _tool_json(
+            {
+                "status": "ok",
+                "spec": {"id": str(spec.get("id")), "title": title, "content": _node_content(spec)},
+                "instruction": (
+                    f"Implement the '{title}' spec for the {project_name} project. Treat the spec "
+                    "Markdown as the source of truth, build exactly the functional requirements it "
+                    "lists, and cite each FR-### you implement back to its canvas node ID. Do not add "
+                    "scope that is not in the spec."
+                ),
+            }
+        )
+
     @app.resource(
         uri="info://server",
         name="ServerInfo",
@@ -249,7 +287,8 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
             "Primary tools: search_jira_issues, fetch_jira_issue, search_confluence_pages, "
             "fetch_confluence_page, fetch_figma_link_metadata, fetch_github_issue_or_pr, "
             "search_sources, list_canvas_projects, get_canvas_snapshot, get_canvas_context, "
-            "upsert_requirement_node, upsert_source_snapshot_node, summarize_canvas_nodes\n"
+            "upsert_requirement_node, upsert_source_snapshot_node, summarize_canvas_nodes, "
+            "get_canvas_spec\n"
             "Purpose: expose saved requirements canvas context to coding agents and normalize "
             "external source context for saved requirements canvases."
         )
@@ -296,6 +335,17 @@ def register_capabilities(app: FastMCP, db_path: Path | None = None) -> None:
             "as the source of truth for requirements. Update the canvas with upsert_requirement_node or "
             f"upsert_source_snapshot_node if implementation decisions change. Task: {task}"
         )
+
+
+def _node_field(node: dict[str, Any], key: str) -> str:
+    data = node.get("data") if isinstance(node.get("data"), dict) else {}
+    return str(data.get(key) or "")
+
+
+def _node_content(node: dict[str, Any]) -> str:
+    data = node.get("data") if isinstance(node.get("data"), dict) else {}
+    fields = data.get("fields") if isinstance(data.get("fields"), dict) else {}
+    return str(fields.get("content") or "")
 
 
 def _count_type(nodes: list[dict[str, Any]], canvas_type: str) -> int:

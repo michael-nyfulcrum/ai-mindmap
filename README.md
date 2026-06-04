@@ -6,7 +6,7 @@ ai-mindmap is the single source of truth that finally closes the gap between bus
 
 **[https://7865420.xyz](https://7865420.xyz)**
 
-A seeded example project loads automatically on first visit. No login required.
+The live demo starts clean; create a project from a template. No login required.
 
 ## What's Working
 
@@ -17,6 +17,7 @@ A seeded example project loads automatically on first visit. No login required.
 - [x] AI impact analysis — when a requirement changes, only the genuinely affected nodes are flagged
 - [x] Impact badges — "Needs update", "Outdated", and "Conflict" surface directly on canvas nodes
 - [x] MCP server — any MCP-capable coding agent can read the full project context and write back changes
+- [x] Spec-driven development — turn a node into a GitHub Spec Kit feature spec via the "Create spec" AI action; coding agents fetch and build it with the `get_canvas_spec` MCP tool
 - [x] AI chat — ask questions against the saved canvas and get cited answers
 - [x] Developer handoff panel — one-click MCP endpoint and setup instructions for coding agents
 - [x] Audit trail — every node change records who made it and when, including agent-originated writes
@@ -129,7 +130,6 @@ packaging, and backup commands.
 ## Documentation
 
 - [Demo](docs/demo.md)
-- [Demo runbook (live AI/MCP script + prompts)](docs/demo-runbook.md)
 - [Git workflow](docs/git-workflow.md)
 - [Product requirements](docs/product-requirements.md)
 - [Current product spec and progress tracker](docs/context-canvas-product-spec.md)
@@ -161,12 +161,13 @@ DOCKER_VITE_MCP_URL=/mcp
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4.1-mini
 CONTEXT_CANVAS_DISABLE_CHANGE_AI=
+CONTEXT_CANVAS_DISABLE_SPEC_AI=
 ATLASSIAN_URL=
 ATLASSIAN_EMAIL=
 ATLASSIAN_TOKEN=
 ```
 
-Chat and analysis always use OpenAI. Contract change impact analysis uses OpenAI when available; tests can set `CONTEXT_CANVAS_DISABLE_CHANGE_AI=1` to use deterministic offline impact rules.
+Chat and analysis always use OpenAI. Contract change impact analysis and spec generation use OpenAI when available; tests can set `CONTEXT_CANVAS_DISABLE_CHANGE_AI=1` and `CONTEXT_CANVAS_DISABLE_SPEC_AI=1` to use the deterministic offline paths.
 
 ## Git Workflow
 

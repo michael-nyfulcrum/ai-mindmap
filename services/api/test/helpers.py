@@ -16,6 +16,8 @@ class ApiE2ECase(unittest.TestCase):
     def setUp(self) -> None:
         self.previous_change_ai = os.environ.get("CONTEXT_CANVAS_DISABLE_CHANGE_AI")
         os.environ["CONTEXT_CANVAS_DISABLE_CHANGE_AI"] = "1"
+        self.previous_spec_ai = os.environ.get("CONTEXT_CANVAS_DISABLE_SPEC_AI")
+        os.environ["CONTEXT_CANVAS_DISABLE_SPEC_AI"] = "1"
         self.tmpdir = tempfile.TemporaryDirectory()
         self.root = Path(self.tmpdir.name)
         self.db_path = self.root / "context-canvas.sqlite"
@@ -37,6 +39,10 @@ class ApiE2ECase(unittest.TestCase):
             os.environ.pop("CONTEXT_CANVAS_DISABLE_CHANGE_AI", None)
         else:
             os.environ["CONTEXT_CANVAS_DISABLE_CHANGE_AI"] = self.previous_change_ai
+        if self.previous_spec_ai is None:
+            os.environ.pop("CONTEXT_CANVAS_DISABLE_SPEC_AI", None)
+        else:
+            os.environ["CONTEXT_CANVAS_DISABLE_SPEC_AI"] = self.previous_spec_ai
 
     def create_project(self, name: str = "E2E canvas") -> str:
         response = self.client.post("/api/projects", json={"name": name})
