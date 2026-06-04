@@ -68,7 +68,26 @@ requirement changes, the system understands what depends on it. That gives the
 team a smaller, smarter review surface and gives AI agents structured context
 instead of loose prompt soup.
 
-### Slide 4: What It Does
+### Slide 4: Spec-Driven Design
+
+Visible slide:
+
+```text
+Specs are the new handoff
+```
+
+Speaker notes:
+
+Spec-driven design is the future of development because AI agents need clear,
+testable execution contracts, not vague tickets or long chat threads. The
+winning teams will not be the ones that simply ask AI to write more code. They
+will be the ones that turn product intent into structured specs, keep those
+specs connected to source evidence, and let developers and agents build from the
+same verified truth. mindmap makes that workflow practical: visual intent
+becomes a spec, the spec becomes the delivery contract, and the agent implements
+against requirements that are traceable, reviewable, and change-aware.
+
+### Slide 5: What It Does
 
 Visible slide:
 
@@ -90,7 +109,7 @@ acceptance criteria, development requirements, and traceability back to the
 canvas. Fifth, MCP hands that spec to the coding agent as the implementation
 contract.
 
-### Slide 5: Demo Flow
+### Slide 6: Demo Flow
 
 Visible slide:
 
@@ -109,7 +128,7 @@ badges, regenerate or resync the spec, and ask the agent to update only what
 changed. The wow moment is that the canvas stays the source of truth from
 product intent to executable delivery.
 
-### Slide 6: Why This Wins
+### Slide 7: Why This Wins
 
 Visible slide:
 
@@ -130,7 +149,7 @@ context through MCP, not screenshots, stale docs, or vibes. It is portable,
 auditable, and built on boring infrastructure: React, FastAPI, FastMCP, SQLite,
 Docker Compose, and Caddy.
 
-### Slide 7: Close
+### Slide 8: Close
 
 Visible slide:
 

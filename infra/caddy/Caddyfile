@@ -1,5 +1,9 @@
 {$SITE_ADDRESS:localhost:8080} {
-	encode zstd gzip
+	# Don't compress the MCP endpoint: its streamable-http transport keeps the
+	# response open as a stream, and buffering it for compression makes MCP
+	# clients hang until they time out.
+	@compressible not path /mcp*
+	encode @compressible zstd gzip
 	log {
 		output stdout
 		format console
@@ -28,7 +32,11 @@
 		}
 
 		handle /mcp* {
-			reverse_proxy mcp:8790
+			reverse_proxy mcp:8790 {
+				# Stream the response straight through (no proxy buffering) so the
+				# MCP streamable-http transport works.
+				flush_interval -1
+			}
 		}
 
 		handle {
